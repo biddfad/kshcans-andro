@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/models/chapter.dart';
+import '../widgets/zoomable_page.dart';
 import '../../../core/models/manga.dart';
 import '../../../core/database/db_helper.dart';
 import '../../../core/theme/app_theme.dart';
@@ -133,6 +134,9 @@ class _ReaderScreenState extends State<ReaderScreen> {
   double _autoScrollSpeed = 1.0; // 0.5x, 1.0x, 1.5x, 2.0x, 3.0x
   Timer? _autoScrollTimer;
   bool _showSpeedControls = false;
+
+  // Halaman sedang di-zoom (mode horizontal): kunci geser antar halaman
+  bool _isPageZoomed = false;
 
   Chapter get currentChapter {
     if (widget.chapters.isEmpty) {
@@ -1179,6 +1183,8 @@ class _ReaderScreenState extends State<ReaderScreen> {
       return PageView.builder(
         controller: _pageController,
         reverse: isRtl,
+        // Saat halaman di-zoom, geser dipakai untuk menggeser gambar, bukan pindah halaman
+        physics: _isPageZoomed ? const NeverScrollableScrollPhysics() : null,
         itemCount: activePages.length + 1,
         onPageChanged: (index) {
           setState(() {
@@ -1486,14 +1492,14 @@ class _ReaderScreenState extends State<ReaderScreen> {
       );
     }
 
-    return Container(
+    return ZoomablePage(
       key: key,
-      child: InteractiveViewer(
-        minScale: 1.0,
-        maxScale: 4.0,
-        clipBehavior: Clip.none,
-        child: imageWidget,
-      ),
+      onZoomChanged: _readingMode == 'webtoon'
+          ? null
+          : (zoomed) {
+              if (mounted && _isPageZoomed != zoomed) setState(() => _isPageZoomed = zoomed);
+            },
+      child: imageWidget,
     );
   }
 

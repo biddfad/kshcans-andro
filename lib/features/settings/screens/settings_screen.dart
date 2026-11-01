@@ -1,11 +1,19 @@
+import 'dart:convert';
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../core/database/db_helper.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/services/app_update_service.dart';
+import '../../../core/services/chapter_update_service.dart';
 import '../../../core/services/download_service.dart';
+import '../../../core/services/notification_service.dart';
+import '../../../core/services/secure_screen_service.dart';
 import '../../../core/services/security_service.dart';
 import '../../../providers/manga_provider.dart';
 import '../../../providers/theme_provider.dart';
@@ -27,12 +35,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _autoDeleteChapters = true;
   bool _appLockEnabled = false;
   bool _incognitoRecent = false;
+  bool _secureScreen = false;
+  bool _notifyNewChapters = false;
+  bool _isCheckingChapters = false;
   bool _nsfwEnabled = false;
   double _cacheSizeMb = 0.0;
-
-  // Tracker states
-  bool _syncAniList = false;
-  bool _syncMyAnimeList = false;
 
   @override
   void initState() {
@@ -47,12 +54,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final savedNsfw = await DBHelper.instance.getSetting('nsfw_enabled');
       final savedLock = await DBHelper.instance.getSetting('app_lock_enabled');
       final savedIncog = await DBHelper.instance.getSetting('incognito_recent');
+      final savedSecure = await DBHelper.instance.getSetting('secure_screen');
+      final savedNotify = await DBHelper.instance.getSetting(ChapterUpdateService.settingKey);
       if (mounted) {
         setState(() {
           if (savedMode != null && savedMode.isNotEmpty) _readingMode = savedMode;
           _nsfwEnabled = savedNsfw == 'true';
           _appLockEnabled = savedLock == 'true';
           _incognitoRecent = savedIncog == 'true';
+          _secureScreen = savedSecure == 'true';
+          _notifyNewChapters = savedNotify == 'true';
         });
       }
     } catch (_) {}
@@ -412,80 +423,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showTrackersDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: AppTheme.surfaceDark,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: const Row(
-                children: [
-                  Icon(Icons.sync, color: AppTheme.accentCyan),
-                  SizedBox(width: 10),
-                  Text('Sinkronisasi Pelacak', style: TextStyle(fontSize: 16)),
-                ],
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'Hubungkan pelacak untuk mencatat progres bab komik yang telah dibaca secara otomatis.',
-                    style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
-                  ),
-                  const SizedBox(height: 12),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const CircleAvatar(
-                      backgroundColor: Color(0xFF02A9FF),
-                      child: Text('AL', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                    ),
-                    title: const Text('AniList', style: TextStyle(fontSize: 14)),
-                    trailing: TextButton(
-                      child: Text(_syncAniList ? 'Terhubung' : 'Hubungkan', style: TextStyle(color: _syncAniList ? Colors.greenAccent : AppTheme.accentCyan)),
-                      onPressed: () {
-                        setDialogState(() => _syncAniList = !_syncAniList);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(_syncAniList ? 'AniList terhubung!' : 'Koneksi AniList diputus')),
-                        );
-                      },
-                    ),
-                  ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const CircleAvatar(
-                      backgroundColor: Color(0xFF2E51A2),
-                      child: Text('MAL', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-                    ),
-                    title: const Text('MyAnimeList', style: TextStyle(fontSize: 14)),
-                    trailing: TextButton(
-                      child: Text(_syncMyAnimeList ? 'Terhubung' : 'Hubungkan', style: TextStyle(color: _syncMyAnimeList ? Colors.greenAccent : AppTheme.accentCyan)),
-                      onPressed: () {
-                        setDialogState(() => _syncMyAnimeList = !_syncMyAnimeList);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(_syncMyAnimeList ? 'MyAnimeList terhubung!' : 'Koneksi MyAnimeList diputus')),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentCyan, foregroundColor: Colors.black),
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Selesai'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
   void _showSecurityDialog() {
     showDialog(
       context: context,
@@ -516,6 +453,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         _promptSetPin(context, setDialogState);
                       } else {
                         DBHelper.instance.saveSetting('app_lock_enabled', 'false');
+                        DBHelper.instance.saveSetting('app_lock_pin', '');
                         setDialogState(() => _appLockEnabled = false);
                         setState(() => _appLockEnabled = false);
                       }
@@ -525,7 +463,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     contentPadding: EdgeInsets.zero,
                     activeTrackColor: AppTheme.accentCyan,
                     title: const Text('Samarkan di Recent Apps', style: TextStyle(fontSize: 13, color: Colors.white)),
-                    subtitle: const Text('Sembunyikan cover komik di menu multitasking (Anti-Intip)', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                    subtitle: const Text('Sembunyikan layar di menu multitasking & blokir screenshot (Anti-Intip)', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                    value: _secureScreen,
+                    onChanged: (val) {
+                      DBHelper.instance.saveSetting('secure_screen', val ? 'true' : 'false');
+                      SecureScreenService.setEnabled(val);
+                      setDialogState(() => _secureScreen = val);
+                      setState(() => _secureScreen = val);
+                    },
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    activeTrackColor: AppTheme.accentCyan,
+                    title: const Text('Mode Penyamaran', style: TextStyle(fontSize: 13, color: Colors.white)),
+                    subtitle: const Text('Jangan simpan riwayat bacaan', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
                     value: _incognitoRecent,
                     onChanged: (val) {
                       DBHelper.instance.saveSetting('incognito_recent', val ? 'true' : 'false');
@@ -617,6 +568,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               controller: pinController,
               autofocus: true,
               keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               maxLength: 4,
               obscureText: true,
               textAlign: TextAlign.center,
@@ -640,18 +592,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             onPressed: () async {
               final pin = pinController.text.trim();
-              if (pin.length == 4) {
-                final hashedPin = SecurityService.hashPin(pin);
-                await DBHelper.instance.saveSetting('app_lock_enabled', 'true');
-                await DBHelper.instance.saveSetting('app_lock_pin', hashedPin);
-                setDialogState(() => _appLockEnabled = true);
-                setState(() => _appLockEnabled = true);
-                if (context.mounted) {
-                  Navigator.pop(c);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Kunci PIN aplikasi berhasil diaktifkan!')),
-                  );
-                }
+              if (!SecurityService.isValidPinFormat(pin)) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('PIN harus terdiri dari 4 angka')),
+                );
+                return;
+              }
+              final hashedPin = await SecurityService.hashPin(pin);
+              await DBHelper.instance.saveSetting('pin_failed_attempts', '0');
+              await DBHelper.instance.saveSetting('pin_lockout_until', '');
+              await DBHelper.instance.saveSetting('app_lock_enabled', 'true');
+              await DBHelper.instance.saveSetting('app_lock_pin', hashedPin);
+              setDialogState(() => _appLockEnabled = true);
+              setState(() => _appLockEnabled = true);
+              if (context.mounted) {
+                Navigator.pop(c);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Kunci PIN aplikasi berhasil diaktifkan!')),
+                );
               }
             },
             child: const Text('Simpan'),
@@ -681,35 +639,86 @@ class _SettingsScreenState extends State<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Ekspor daftar komik favorit dari database lokal HP ke format JSON nyata agar aman dan dapat dipulihkan kapan saja.',
+                'Cadangan berisi pustaka, riwayat bacaan, dan daftar bab yang sudah dibaca. '
+                'Simpan file-nya di tempat aman (mis. Google Drive) sebelum uninstall atau ganti HP.',
                 style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
               ),
               const SizedBox(height: 16),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.file_upload, color: AppTheme.accentCyan),
-                title: const Text('Cadangkan Pustaka (Ekspor)', style: TextStyle(fontSize: 14)),
-                subtitle: const Text('Salin seluruh data JSON ke Clipboard', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                leading: const Icon(Icons.save_alt, color: AppTheme.accentCyan),
+                title: const Text('Simpan Cadangan ke File', style: TextStyle(fontSize: 14)),
+                subtitle: const Text('Pilih folder di HP untuk menyimpan file .json', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
                 onTap: () async {
-                  final provider = context.read<MangaProvider>();
-                  final jsonBackup = await provider.exportLibraryJson();
-                  await Clipboard.setData(ClipboardData(text: jsonBackup));
-                  if (!ctx.mounted) return;
-                  Navigator.pop(ctx);
-                  messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('Cadangan JSON pustaka SQLite berhasil disalin ke Clipboard!'),
-                      backgroundColor: Colors.green,
-                    ),
+                  final jsonBackup = await context.read<MangaProvider>().exportLibraryJson();
+                  try {
+                    final saved = await FilePicker.saveFile(
+                      dialogTitle: 'Simpan cadangan KsHcans',
+                      fileName: _backupFileName(),
+                      bytes: Uint8List.fromList(utf8.encode(jsonBackup)),
+                      mimeType: 'application/json',
+                    );
+                    if (saved == null) return; // Dibatalkan pengguna
+                    if (!ctx.mounted) return;
+                    Navigator.pop(ctx);
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('File cadangan berhasil disimpan!'), backgroundColor: Colors.green),
+                    );
+                  } catch (_) {
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('Gagal menyimpan file cadangan.'), backgroundColor: Colors.redAccent),
+                    );
+                  }
+                },
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.share, color: AppTheme.accentCyan),
+                title: const Text('Bagikan File Cadangan', style: TextStyle(fontSize: 14)),
+                subtitle: const Text('Kirim ke Google Drive, WhatsApp, Telegram, dll.', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                onTap: () async {
+                  final jsonBackup = await context.read<MangaProvider>().exportLibraryJson();
+                  final file = File(p.join((await getTemporaryDirectory()).path, _backupFileName()));
+                  await file.writeAsString(jsonBackup);
+                  await SharePlus.instance.share(
+                    ShareParams(files: [XFile(file.path, mimeType: 'application/json')], subject: 'Cadangan KsHcans'),
                   );
+                  if (ctx.mounted) Navigator.pop(ctx);
                 },
               ),
               const Divider(color: AppTheme.cardDark),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.file_download, color: AppTheme.accentCyan),
-                title: const Text('Pulihkan Pustaka (Impor)', style: TextStyle(fontSize: 14)),
-                subtitle: const Text('Kembalikan komik favorit dari teks JSON', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                leading: const Icon(Icons.restore, color: AppTheme.accentCyan),
+                title: const Text('Pulihkan dari File', style: TextStyle(fontSize: 14)),
+                subtitle: const Text('Pilih file cadangan .json', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                onTap: () async {
+                  final provider = context.read<MangaProvider>();
+                  final picked = await FilePicker.pickFiles(
+                    dialogTitle: 'Pilih file cadangan KsHcans',
+                    type: FileType.custom,
+                    allowedExtensions: ['json'],
+                  );
+                  if (picked.isEmpty) return; // Dibatalkan pengguna
+                  final String content;
+                  try {
+                    content = await picked.first.xFile.readAsString();
+                  } catch (_) {
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('File tidak dapat dibaca.'), backgroundColor: Colors.redAccent),
+                    );
+                    return;
+                  }
+                  final result = await provider.importLibraryJson(content);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  _showImportResult(messenger, result);
+                },
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.paste, color: AppTheme.textMuted),
+                title: const Text('Pulihkan dari Teks JSON', style: TextStyle(fontSize: 14)),
+                subtitle: const Text('Untuk cadangan lama yang disalin ke Clipboard', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
                 onTap: () {
                   Navigator.pop(ctx);
                   _showRestoreDialog();
@@ -725,6 +734,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         );
       },
+    );
+  }
+
+  String _backupFileName() {
+    final now = DateTime.now();
+    String two(int n) => n.toString().padLeft(2, '0');
+    return 'KsHcans_cadangan_${now.year}${two(now.month)}${two(now.day)}_${two(now.hour)}${two(now.minute)}.json';
+  }
+
+  void _showImportResult(ScaffoldMessengerState messenger, BackupImportResult result) {
+    if (result.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Format cadangan tidak valid atau tidak berisi data.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          'Berhasil dipulihkan: ${result.library} komik, ${result.history} riwayat, '
+          '${result.readChapters} bab terbaca.',
+        ),
+        backgroundColor: Colors.green,
+      ),
     );
   }
 
@@ -805,25 +841,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   return;
                 }
 
-                final count = await provider.importLibraryJson(content);
+                final result = await provider.importLibraryJson(content);
                 if (!ctx.mounted) return;
                 Navigator.pop(ctx);
-
-                if (count > 0) {
-                  messenger.showSnackBar(
-                    SnackBar(
-                      content: Text('Sukses memulihkan $count komik ke Pustaka SQLite!'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                } else {
-                  messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('Format JSON cadangan tidak valid atau gagal dibaca.'),
-                      backgroundColor: Colors.redAccent,
-                    ),
-                  );
-                }
+                _showImportResult(messenger, result);
               },
               child: const Text('Pulihkan Sekarang', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
@@ -871,11 +892,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('KsHcans', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  Text('v1.0.0 (Release Build)', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                  const Text('KsHcans', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text('v${AppUpdateService.currentVersion} (Release Build)', style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
                 ],
               ),
             ],
@@ -920,12 +941,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             TextButton(
               onPressed: () {
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Anda menggunakan versi terbaru KsHcans (v1.0.0)!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
+                AppUpdateService.performManualCheck(context);
               },
               child: const Text('Cek Pembaruan', style: TextStyle(color: AppTheme.accentCyan)),
             ),
@@ -971,16 +987,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: _showStorageDialog,
           ),
 
-          _buildHeader('SINKRONISASI & AKUN'),
-          _buildSettingTile(
-            icon: Icons.sync,
-            title: 'Sinkronisasi Pelacak (Trackers)',
-            subtitle: 'AniList, MyAnimeList, Kitsu',
-            onTap: _showTrackersDialog,
+          _buildHeader('NOTIFIKASI'),
+          SwitchListTile(
+            secondary: const Icon(Icons.notifications_active_outlined, color: Colors.white70),
+            activeTrackColor: AppTheme.accentCyan,
+            title: const Text('Notifikasi Bab Baru', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+            subtitle: Text(
+              ChapterUpdateService.isSupported
+                  ? 'Cek komik di Pustaka setiap ±6 jam, walau aplikasi ditutup'
+                  : 'Belum didukung di perangkat ini',
+              style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+            ),
+            value: _notifyNewChapters,
+            onChanged: ChapterUpdateService.isSupported && !_isCheckingChapters ? _toggleNewChapterNotifications : null,
           ),
+          if (_notifyNewChapters)
+            ListTile(
+              leading: _isCheckingChapters
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.accentCyan),
+                    )
+                  : const Icon(Icons.refresh, color: Colors.white70),
+              title: const Text('Cek Bab Baru Sekarang', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+              subtitle: const Text('Periksa semua komik di Pustaka saat ini juga', style: TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+              onTap: _isCheckingChapters ? null : _checkNewChaptersNow,
+            ),
+
+          _buildHeader('KEAMANAN & PRIVASI'),
           _buildSettingTile(
             icon: Icons.security_outlined,
-            title: 'Keamanan & Kunci Biometrik',
+            title: 'Keamanan & Kunci PIN',
             subtitle: _appLockEnabled ? 'Kunci aplikasi: Aktif' : 'Kunci aplikasi: Nonaktif',
             onTap: _showSecurityDialog,
           ),
@@ -1002,6 +1040,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _toggleNewChapterNotifications(bool enable) async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (enable && !await NotificationService.requestPermission()) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Izin notifikasi ditolak. Aktifkan lewat Pengaturan HP > Aplikasi > KsHcans.')),
+      );
+      return;
+    }
+    setState(() => _isCheckingChapters = enable);
+    try {
+      // Saat diaktifkan, bab yang ada sekarang dicatat dulu (bisa beberapa detik)
+      await ChapterUpdateService.setEnabled(enable);
+      if (!mounted) return;
+      setState(() => _notifyNewChapters = enable);
+      messenger.showSnackBar(SnackBar(
+        content: Text(enable
+            ? 'Notifikasi bab baru aktif. Kamu akan diberi tahu saat ada bab baru.'
+            : 'Notifikasi bab baru dimatikan'),
+      ));
+    } catch (_) {
+      messenger.showSnackBar(const SnackBar(content: Text('Gagal mengubah pengaturan notifikasi')));
+    } finally {
+      if (mounted) setState(() => _isCheckingChapters = false);
+    }
+  }
+
+  Future<void> _checkNewChaptersNow() async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _isCheckingChapters = true);
+    try {
+      final results = await ChapterUpdateService.checkLibrary();
+      await NotificationService.showNewChapters(results);
+      messenger.showSnackBar(SnackBar(
+        content: Text(results.isEmpty
+            ? 'Belum ada bab baru untuk komik di Pustaka'
+            : '${results.length} komik punya bab baru!'),
+      ));
+    } finally {
+      if (mounted) setState(() => _isCheckingChapters = false);
+    }
   }
 
   Widget _buildHeader(String title) {

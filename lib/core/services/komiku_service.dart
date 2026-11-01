@@ -24,7 +24,8 @@ class KomikuService {
   /// 2. Mengambil komik rilis terbaru di Komiku
   static Future<List<Manga>> getLatestUpdates({int page = 1}) async {
     final pagePath = page > 1 ? 'page/$page/' : '';
-    final url = Uri.parse('$baseUrl/pustaka/$pagePath');
+    // Halaman /pustaka/ kini memuat daftarnya lewat HTMX dari api.komiku.org/manga/
+    final url = Uri.parse('$searchApiUrl/manga/$pagePath');
     return _parseMangaList(url, category: 'Terbaru');
   }
 

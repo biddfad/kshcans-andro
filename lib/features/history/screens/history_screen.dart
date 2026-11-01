@@ -19,11 +19,25 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   List<Map<String, dynamic>> _historyItems = [];
   bool _isLoading = true;
+  int _lastBackupRestoreCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadHistory();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Muat ulang riwayat setelah cadangan dipulihkan dari Pengaturan
+    final restoreCount = context.watch<MangaProvider>().backupRestoreCount;
+    if (restoreCount != _lastBackupRestoreCount) {
+      _lastBackupRestoreCount = restoreCount;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadHistory();
+      });
+    }
   }
 
   Future<void> _loadHistory() async {

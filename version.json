@@ -1,0 +1,9 @@
+{
+  "version": "1.0.2",
+  "versionCode": 2005,
+  "releaseDate": "2026-11-01",
+  "title": "KsHcans v1.0.2 Flagship",
+  "changelog": "- Fitur In-App Auto-Updater (OTA Update) aktif\n- Infinity Continuous Chapter Reader tanpa jeda\n- Perbaikan pemuatan cover gambar Shinigami\n- Filter bab berlisensi resmi MangaDex\n- Penguatan keamanan PIN SHA-256 dan auto-lock\n- Download offline atomik anti-korup",
+  "downloadUrl": "https://github.com/biddfad/kshcans-andro/releases/download/v1.0.2/KsHcans.apk",
+  "browserUrl": "https://github.com/biddfad/kshcans-andro"
+}

@@ -38,6 +38,7 @@ class DBHelper {
     await _createReadingHistoryTable(db);
     await _createReadChaptersTable(db);
     await _createSettingsTable(db);
+    await _createKnownChaptersTable(db);
     return db;
   }
 
@@ -46,6 +47,17 @@ class DBHelper {
       CREATE TABLE IF NOT EXISTS read_chapters (
         chapter_url TEXT PRIMARY KEY,
         read_at TEXT NOT NULL
+      )
+    ''');
+  }
+
+  /// Bab yang sudah pernah dilihat per komik, untuk mendeteksi bab baru (notifikasi)
+  Future<void> _createKnownChaptersTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS known_chapters (
+        manga_url TEXT NOT NULL,
+        chapter_url TEXT NOT NULL,
+        PRIMARY KEY (manga_url, chapter_url)
       )
     ''');
   }
@@ -351,6 +363,67 @@ class DBHelper {
     } catch (_) {
       return {};
     }
+  }
+
+  /// Seluruh bab yang sudah dibaca beserta waktunya (untuk file cadangan)
+  Future<List<Map<String, dynamic>>> getReadChaptersForBackup() async {
+    final db = await instance.database;
+    return await db.query('read_chapters');
+  }
+
+  /// Pulihkan bab terbaca dari cadangan tanpa menimpa data yang sudah ada
+  Future<int> restoreReadChapters(List<Map<String, dynamic>> rows) async {
+    final db = await instance.database;
+    final batch = db.batch();
+    for (final row in rows) {
+      batch.insert('read_chapters', row, conflictAlgorithm: ConflictAlgorithm.ignore);
+      batch.rawUpdate('UPDATE chapters SET is_read = 1 WHERE url = ?', [row['chapter_url']]);
+    }
+    await batch.commit(noResult: true);
+    return rows.length;
+  }
+
+  /// Pulihkan riwayat bacaan; per komik hanya entri yang lebih baru yang disimpan
+  Future<int> restoreReadingHistory(List<Map<String, dynamic>> rows) async {
+    final db = await instance.database;
+    final existing = {
+      for (final row in await db.query('reading_history', columns: ['manga_url', 'read_at']))
+        row['manga_url'] as String: row['read_at'] as String,
+    };
+    final batch = db.batch();
+    var restored = 0;
+    for (final row in rows) {
+      final current = existing[row['manga_url']];
+      if (current != null && current.compareTo(row['read_at'] as String) >= 0) continue;
+      batch.insert('reading_history', row, conflictAlgorithm: ConflictAlgorithm.replace);
+      restored++;
+    }
+    await batch.commit(noResult: true);
+    return restored;
+  }
+
+  Future<Set<String>> getKnownChapterUrls(String mangaUrl) async {
+    final db = await instance.database;
+    final rows = await db.query(
+      'known_chapters',
+      columns: ['chapter_url'],
+      where: 'manga_url = ?',
+      whereArgs: [mangaUrl],
+    );
+    return rows.map((row) => row['chapter_url'] as String).toSet();
+  }
+
+  Future<void> addKnownChapters(String mangaUrl, Iterable<String> chapterUrls) async {
+    final db = await instance.database;
+    final batch = db.batch();
+    for (final url in chapterUrls) {
+      batch.insert(
+        'known_chapters',
+        {'manga_url': mangaUrl, 'chapter_url': url},
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+    }
+    await batch.commit(noResult: true);
   }
 
   Future<String?> getSetting(String key, {String? defaultValue}) async {

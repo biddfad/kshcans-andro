@@ -3,13 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../core/models/manga.dart';
 import '../core/models/chapter.dart';
 import '../core/database/db_helper.dart';
-import '../core/services/bacakomik_service.dart';
-import '../core/services/doujindesu_service.dart';
-import '../core/services/kiryuu_service.dart';
-import '../core/services/komiku_service.dart';
-import '../core/services/komikindo_service.dart';
-import '../core/services/mangadex_service.dart';
-import '../core/services/shinigami_service.dart';
+import '../core/services/chapter_fetcher.dart';
 
 class MangaProvider with ChangeNotifier {
   String _selectedCategory = 'Semua';
@@ -106,11 +100,17 @@ class MangaProvider with ChangeNotifier {
   }
 
   /// Ekspor seluruh komik di pustaka ke format string JSON cadangan
+  /// Bertambah setiap kali cadangan dipulihkan, agar layar lain memuat ulang datanya
+  int _backupRestoreCount = 0;
+  int get backupRestoreCount => _backupRestoreCount;
+
   Future<String> exportLibraryJson() async {
     final list = await DBHelper.instance.getLibraryManga();
+    final history = await DBHelper.instance.getReadingHistory();
+    final readChapters = await DBHelper.instance.getReadChaptersForBackup();
     final data = {
       'app': 'KsHcans',
-      'version': '1.0.0',
+      'version': '2',
       'date': DateTime.now().toIso8601String(),
       'total': list.length,
       'library': list.map((m) => {
@@ -125,14 +125,18 @@ class MangaProvider with ChangeNotifier {
         'category': m.category,
         'unreadCount': m.unreadCount,
       }).toList(),
+      'history': history.map((h) => Map<String, dynamic>.from(h)..remove('id')).toList(),
+      'readChapters': readChapters,
     };
     return const JsonEncoder.withIndent('  ').convert(data);
   }
 
-  /// Impor / pulihkan komik dari teks JSON cadangan ke database SQLite
-  Future<int> importLibraryJson(String jsonString) async {
+  /// Impor / pulihkan pustaka, riwayat, dan bab terbaca dari teks JSON cadangan.
+  /// Mendukung cadangan versi lama yang hanya berisi pustaka.
+  Future<BackupImportResult> importLibraryJson(String jsonString) async {
     try {
       final decoded = jsonDecode(jsonString);
+      if (decoded is! Map) return const BackupImportResult();
       final rawList = decoded['library'] as List? ?? [];
       int imported = 0;
       for (final item in rawList) {
@@ -159,10 +163,42 @@ class MangaProvider with ChangeNotifier {
           }
         }
       }
+
+      final history = <Map<String, dynamic>>[];
+      for (final item in decoded['history'] as List? ?? const []) {
+        if (item is! Map) continue;
+        final mangaUrl = item['manga_url']?.toString() ?? '';
+        final chapterUrl = item['chapter_url']?.toString() ?? '';
+        final readAt = DateTime.tryParse(item['read_at']?.toString() ?? '');
+        if (mangaUrl.isEmpty || chapterUrl.isEmpty || readAt == null) continue;
+        history.add({
+          'manga_title': item['manga_title']?.toString() ?? 'Tanpa Judul',
+          'manga_url': mangaUrl,
+          'source_id': item['source_id']?.toString() ?? '',
+          'thumbnail_url': item['thumbnail_url']?.toString() ?? '',
+          'chapter_name': item['chapter_name']?.toString() ?? '',
+          'chapter_url': chapterUrl,
+          'chapter_number': (item['chapter_number'] as num?)?.toDouble() ?? 0,
+          'read_at': readAt.toIso8601String(),
+        });
+      }
+
+      final readChapters = <Map<String, dynamic>>[];
+      for (final item in decoded['readChapters'] as List? ?? const []) {
+        if (item is! Map) continue;
+        final url = item['chapter_url']?.toString() ?? '';
+        if (url.isEmpty) continue;
+        final readAt = DateTime.tryParse(item['read_at']?.toString() ?? '') ?? DateTime.now();
+        readChapters.add({'chapter_url': url, 'read_at': readAt.toIso8601String()});
+      }
+
+      final historyCount = await DBHelper.instance.restoreReadingHistory(history);
+      final readCount = await DBHelper.instance.restoreReadChapters(readChapters);
+      _backupRestoreCount++;
       notifyListeners();
-      return imported;
+      return BackupImportResult(library: imported, history: historyCount, readChapters: readCount);
     } catch (_) {
-      return 0;
+      return const BackupImportResult();
     }
   }
 
@@ -192,29 +228,12 @@ class MangaProvider with ChangeNotifier {
     }
 
     try {
-      List<Chapter> chapters = [];
-      if (manga.sourceId == 'shinigami') {
-        chapters = await ShinigamiService.getMangaChapters(manga.url);
-      } else if (manga.sourceId == 'mangadex') {
-        chapters = await MangaDexService.getMangaChapters(manga.url);
-      } else if (manga.sourceId == 'kiryuu') {
-        final details = await KiryuuService.getMangaDetails(manga.url);
-        chapters = details['chapters'] ?? [];
-      } else if (manga.sourceId == 'doujindesu') {
-        final details = await DoujinDesuService.getMangaDetails(manga.url);
-        chapters = details['chapters'] ?? [];
-      } else if (manga.sourceId == 'komiku') {
-        final details = await KomikuService.getMangaDetails(manga.url);
-        chapters = details['chapters'] ?? [];
-      } else if (manga.sourceId == 'komikindo') {
-        final details = await KomikIndoService.getMangaDetails(manga.url);
-        chapters = details['chapters'] ?? [];
-      } else {
-        final details = await BacaKomikService.getMangaDetails(manga.url);
-        chapters = details['chapters'] ?? [];
-      }
-
+      final chapters = await ChapterFetcher.fetch(manga);
       if (chapters.isNotEmpty) {
+        if (_savedLibrary.any((m) => m.url == manga.url)) {
+          // Bab yang sudah terlihat di aplikasi tidak perlu dinotifikasi lagi
+          DBHelper.instance.addKnownChapters(manga.url, chapters.map((c) => c.url));
+        }
         _chaptersCache[manga.url] = chapters;
         if (manga.id != null) {
           DBHelper.instance.syncMangaChapters(manga.id!, chapters);
@@ -242,4 +261,14 @@ class MangaProvider with ChangeNotifier {
     chapter.isRead = isRead;
     notifyListeners();
   }
+}
+
+/// Ringkasan hasil pemulihan cadangan
+class BackupImportResult {
+  final int library;
+  final int history;
+  final int readChapters;
+  const BackupImportResult({this.library = 0, this.history = 0, this.readChapters = 0});
+
+  bool get isEmpty => library == 0 && history == 0 && readChapters == 0;
 }

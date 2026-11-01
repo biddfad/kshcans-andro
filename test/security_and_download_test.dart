@@ -1,26 +1,49 @@
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:aplikasibacakomik/core/services/security_service.dart';
 import 'package:aplikasibacakomik/core/services/download_service.dart';
 
 void main() {
   group('SecurityService Tests', () {
-    test('hashPin produces 64-char SHA-256 hex string', () {
-      final hash = SecurityService.hashPin('1234');
-      expect(hash.length, 64);
-      expect(hash, isNot('1234'));
+    test('hashPin produces salted PBKDF2 hash that never contains the PIN', () async {
+      final hash = await SecurityService.hashPin('1234');
+      expect(hash.startsWith('pbkdf2\$${SecurityService.pbkdf2Iterations}\$'), isTrue);
+      expect(hash.contains('1234'), isFalse);
     });
 
-    test('verifyPin correctly matches hashed PIN', () {
-      final hash = SecurityService.hashPin('5678');
-      expect(SecurityService.verifyPin('5678', hash), isTrue);
-      expect(SecurityService.verifyPin('1234', hash), isFalse);
-      expect(SecurityService.verifyPin('0000', hash), isFalse);
+    test('hashPin uses a random salt per call', () async {
+      final a = await SecurityService.hashPin('1234');
+      final b = await SecurityService.hashPin('1234');
+      expect(a, isNot(b));
     });
 
-    test('verifyPin supports legacy plaintext PIN fallback', () {
-      expect(SecurityService.verifyPin('4321', '4321'), isTrue);
-      expect(SecurityService.verifyPin('1111', '4321'), isFalse);
-      expect(SecurityService.verifyPin('1234', ''), isFalse);
+    test('verifyPin correctly matches hashed PIN', () async {
+      final hash = await SecurityService.hashPin('5678');
+      expect(await SecurityService.verifyPin('5678', hash), isTrue);
+      expect(await SecurityService.verifyPin('1234', hash), isFalse);
+      expect(await SecurityService.verifyPin('0000', hash), isFalse);
+    });
+
+    test('verifyPin still accepts legacy SHA-256 hashes for migration', () async {
+      // Hash SHA-256 versi lama untuk PIN '2468'
+      final legacy = sha256.convert(utf8.encode('2468KsHcans_Secure_Salt_2026_@!')).toString();
+      expect(SecurityService.isLegacyHash(legacy), isTrue);
+      expect(await SecurityService.verifyPin('2468', legacy), isTrue);
+      expect(await SecurityService.verifyPin('1111', legacy), isFalse);
+    });
+
+    test('verifyPin no longer accepts plaintext PIN storage', () async {
+      expect(await SecurityService.verifyPin('4321', '4321'), isFalse);
+      expect(await SecurityService.verifyPin('1234', ''), isFalse);
+      expect(SecurityService.isPlaintextPin('4321'), isTrue);
+    });
+
+    test('lockoutFor starts after 5 failures and grows', () {
+      expect(SecurityService.lockoutFor(4), Duration.zero);
+      expect(SecurityService.lockoutFor(5), const Duration(seconds: 30));
+      expect(SecurityService.lockoutFor(10), const Duration(seconds: 60));
+      expect(SecurityService.lockoutFor(1000), const Duration(hours: 1));
     });
   });
 

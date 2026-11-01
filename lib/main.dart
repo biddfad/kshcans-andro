@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/services/app_http_overrides.dart';
+import 'core/services/app_update_service.dart';
+import 'core/services/chapter_update_service.dart';
+import 'core/services/secure_screen_service.dart';
 import 'core/services/security_service.dart';
 import 'core/database/db_helper.dart';
 import 'core/theme/app_theme.dart';
@@ -13,9 +17,14 @@ import 'features/history/screens/history_screen.dart';
 import 'features/browse/screens/browse_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   HttpOverrides.global = AppHttpOverrides();
+  try {
+    await ChapterUpdateService.initialize();
+  } catch (e) {
+    debugPrint('Gagal menyiapkan pengecekan bab baru: $e');
+  }
   runApp(const KomikReaderApp());
 }
 
@@ -57,16 +66,24 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   String _savedPin = '';
   String _enteredPin = '';
   String _pinError = '';
+  bool _isVerifying = false;
+  int _failedAttempts = 0;
+  DateTime? _lockoutUntil;
+  Timer? _lockoutTimer;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _checkAppLock();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AppUpdateService.performSilentCheck(context);
+    });
   }
 
   @override
   void dispose() {
+    _lockoutTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -87,36 +104,89 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   }
 
   Future<void> _checkAppLock() async {
+    final secureScreen = await DBHelper.instance.getSetting('secure_screen');
+    await SecureScreenService.setEnabled(secureScreen == 'true');
+
     final lockEnabled = await DBHelper.instance.getSetting('app_lock_enabled');
-    final pin = await DBHelper.instance.getSetting('app_lock_pin');
+    var pin = await DBHelper.instance.getSetting('app_lock_pin');
+    if (pin != null && SecurityService.isPlaintextPin(pin)) {
+      // Migrasi PIN teks biasa dari versi lama agar tidak lagi tersimpan terbuka
+      pin = await SecurityService.hashPin(pin);
+      await DBHelper.instance.saveSetting('app_lock_pin', pin);
+    }
+    _failedAttempts = int.tryParse(await DBHelper.instance.getSetting('pin_failed_attempts') ?? '') ?? 0;
+    final until = int.tryParse(await DBHelper.instance.getSetting('pin_lockout_until') ?? '');
+    _lockoutUntil = until == null ? null : DateTime.fromMillisecondsSinceEpoch(until);
+
     if (lockEnabled == 'true' && pin != null && pin.isNotEmpty && mounted) {
       setState(() {
         _isLocked = true;
-        _savedPin = pin;
+        _savedPin = pin!;
       });
+      _startLockoutTicker();
     }
   }
 
-  void _onDigitPressed(String digit) {
-    if (_enteredPin.length < 4) {
-      setState(() {
-        _enteredPin += digit;
-        _pinError = '';
-      });
-      if (_enteredPin.length == 4) {
-        if (SecurityService.verifyPin(_enteredPin, _savedPin)) {
-          setState(() {
-            _isLocked = false;
-            _enteredPin = '';
-          });
-        } else {
-          setState(() {
-            _pinError = 'PIN salah, coba lagi';
-            _enteredPin = '';
-          });
-        }
+  bool get _isLockedOut => _lockoutUntil != null && DateTime.now().isBefore(_lockoutUntil!);
+
+  void _startLockoutTicker() {
+    _lockoutTimer?.cancel();
+    if (!_isLockedOut) return;
+    _lockoutTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return timer.cancel();
+      setState(() {});
+      if (!_isLockedOut) timer.cancel();
+    });
+  }
+
+  Future<void> _onDigitPressed(String digit) async {
+    if (_isVerifying || _isLockedOut || _enteredPin.length >= 4) return;
+    setState(() {
+      _enteredPin += digit;
+      _pinError = '';
+    });
+    if (_enteredPin.length < 4) return;
+
+    setState(() => _isVerifying = true);
+    final ok = await SecurityService.verifyPin(_enteredPin, _savedPin);
+    if (!mounted) return;
+
+    if (ok) {
+      if (SecurityService.isLegacyHash(_savedPin)) {
+        // Migrasi hash SHA-256 lama ke PBKDF2 dengan salt acak
+        _savedPin = await SecurityService.hashPin(_enteredPin);
+        await DBHelper.instance.saveSetting('app_lock_pin', _savedPin);
       }
+      _failedAttempts = 0;
+      _lockoutUntil = null;
+      await DBHelper.instance.saveSetting('pin_failed_attempts', '0');
+      await DBHelper.instance.saveSetting('pin_lockout_until', '');
+      if (!mounted) return;
+      setState(() {
+        _isLocked = false;
+        _isVerifying = false;
+        _enteredPin = '';
+      });
+      return;
     }
+
+    _failedAttempts++;
+    final lockout = SecurityService.lockoutFor(_failedAttempts);
+    final lockedNow = lockout > Duration.zero && _failedAttempts % SecurityService.maxAttemptsBeforeLockout == 0;
+    if (lockedNow) {
+      _lockoutUntil = DateTime.now().add(lockout);
+      await DBHelper.instance.saveSetting('pin_lockout_until', '${_lockoutUntil!.millisecondsSinceEpoch}');
+    }
+    await DBHelper.instance.saveSetting('pin_failed_attempts', '$_failedAttempts');
+    if (!mounted) return;
+    final remaining = SecurityService.maxAttemptsBeforeLockout -
+        _failedAttempts % SecurityService.maxAttemptsBeforeLockout;
+    setState(() {
+      _isVerifying = false;
+      _enteredPin = '';
+      _pinError = lockedNow ? '' : 'PIN salah, sisa $remaining percobaan';
+    });
+    _startLockoutTicker();
   }
 
   void _onDeletePressed() {
@@ -179,7 +249,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                     );
                   }),
                 ),
-                if (_pinError.isNotEmpty) ...[
+                if (_isLockedOut) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Terlalu banyak salah. Coba lagi dalam '
+                    '${_lockoutUntil!.difference(DateTime.now()).inSeconds + 1} detik',
+                    style: const TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ] else if (_pinError.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Text(
                     _pinError,
