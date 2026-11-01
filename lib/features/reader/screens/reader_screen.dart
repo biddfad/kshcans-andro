@@ -17,6 +17,7 @@ import '../../../core/services/komiku_service.dart';
 import '../../../core/services/komikindo_service.dart';
 import '../../../core/services/mangadex_service.dart';
 import '../../../core/services/shinigami_service.dart';
+import '../../../core/services/source_config_service.dart';
 import '../../../providers/manga_provider.dart';
 
 /// Data representasi satu bab yang telah selesai dimuat
@@ -148,48 +149,25 @@ class _ReaderScreenState extends State<ReaderScreen> {
 
   /// Header HTTP referer dinamis sesuai sumber bab
   Map<String, String> _getHeadersForChapter(Chapter ch) {
-    final url = ch.url;
-    if (url.startsWith('shinigami:')) {
-      return const {
-        'Referer': 'https://shinigami.asia/',
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      };
-    } else if (url.contains('komiku') || widget.manga?.sourceId == 'komiku') {
-      return const {
-        'Referer': 'https://komiku.org/',
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-      };
-    } else if (url.contains('komikindo') || widget.manga?.sourceId == 'komikindo') {
-      return const {
-        'Referer': 'https://komikindo.ch/',
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-      };
-    } else if (url.contains('doujindesu') || widget.manga?.sourceId == 'doujindesu' || url.contains('desu.')) {
-      return const {
-        'Referer': 'https://doujin.desu.xxx/',
-        'User-Agent':
-            'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36',
-      };
-    } else if (url.contains('kiryuu') || widget.manga?.sourceId == 'kiryuu') {
-      return const {
-        'Referer': 'https://v7.kiryuu.to/',
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      };
-    } else if (widget.manga?.sourceId == 'mangadex' || !url.startsWith('http')) {
-      return const {
-        'User-Agent': 'KsHcans/1.0.0',
-      };
-    } else {
-      return const {
-        'Referer': 'https://bacakomik.my/',
-        'User-Agent':
-            'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-      };
+    String sourceId = widget.manga?.sourceId ?? '';
+    if (sourceId.isEmpty) {
+      if (ch.url.startsWith('shinigami:')) {
+        sourceId = 'shinigami';
+      } else if (ch.url.contains('komiku')) {
+        sourceId = 'komiku';
+      } else if (ch.url.contains('komikindo')) {
+        sourceId = 'komikindo';
+      } else if (ch.url.contains('doujindesu') || ch.url.contains('desu.')) {
+        sourceId = 'doujindesu';
+      } else if (ch.url.contains('kiryuu')) {
+        sourceId = 'kiryuu';
+      } else if (ch.url.contains('mangadex') || !ch.url.startsWith('http')) {
+        sourceId = 'mangadex';
+      } else {
+        sourceId = 'bacakomik';
+      }
     }
+    return SourceConfigService.getImageHeaders(sourceId, ch.url);
   }
 
   @override

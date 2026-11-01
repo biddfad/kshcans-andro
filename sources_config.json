@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "lastUpdated": "2026-11-01",
+  "sources": {
+    "shinigami": {
+      "apiUrl": "https://api.shngm.io",
+      "assetsUrl": "https://assets.shngm.id",
+      "referer": "https://shinigami.asia/"
+    },
+    "komikindo": {
+      "baseUrl": "https://komikindo.ch"
+    },
+    "kiryuu": {
+      "baseUrl": "https://v7.kiryuu.to"
+    },
+    "bacakomik": {
+      "baseUrl": "https://bacakomik.my"
+    },
+    "komiku": {
+      "baseUrl": "https://komiku.org"
+    },
+    "doujindesu": {
+      "baseUrl": "https://doujin.desu.xxx"
+    },
+    "mangadex": {
+      "baseUrl": "https://api.mangadex.org"
+    }
+  }
+}

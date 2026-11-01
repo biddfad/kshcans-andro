@@ -10,6 +10,7 @@ import '../../../core/services/komiku_service.dart';
 import '../../../core/services/komikindo_service.dart';
 import '../../../core/services/mangadex_service.dart';
 import '../../../core/services/shinigami_service.dart';
+import '../../../core/services/source_config_service.dart';
 import '../../../core/database/db_helper.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/source_logo.dart';
@@ -208,39 +209,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
   }
 
   Map<String, String> _getImageHeaders(Manga manga) {
-    if (manga.sourceId == 'shinigami' || manga.thumbnailUrl.contains('shngm')) {
-      return const {
-        'Referer': 'https://shinigami.asia/',
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      };
-    } else if (manga.sourceId == 'komiku' || manga.thumbnailUrl.contains('komiku')) {
-      return const {
-        'Referer': 'https://komiku.org/',
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-      };
-    } else if (manga.sourceId == 'komikindo' || manga.thumbnailUrl.contains('komikindo')) {
-      return const {
-        'Referer': 'https://komikindo.ch/',
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-      };
-    } else if (manga.sourceId == 'kiryuu' || manga.thumbnailUrl.contains('kiryuu')) {
-      return const {
-        'Referer': 'https://v7.kiryuu.to/',
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      };
-    } else if (manga.sourceId == 'mangadex' || manga.thumbnailUrl.contains('mangadex')) {
-      return const {'User-Agent': 'KsHcans/1.0.0'};
-    } else {
-      return const {
-        'Referer': 'https://bacakomik.my/',
-        'User-Agent':
-            'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-      };
-    }
+    return SourceConfigService.getImageHeaders(manga.sourceId, manga.thumbnailUrl);
   }
 
   Widget _buildSourceFilterChip(String label, String sourceId) {

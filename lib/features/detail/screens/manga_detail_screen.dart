@@ -7,6 +7,7 @@ import '../../../core/database/db_helper.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/source_logo.dart';
 import '../../../core/services/download_service.dart';
+import '../../../core/services/source_config_service.dart';
 import '../../../providers/manga_provider.dart';
 import '../../reader/screens/reader_screen.dart';
 
@@ -452,30 +453,7 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
   }
 
   Map<String, String> get _imageHeaders {
-    final manga = widget.manga;
-    if (manga.sourceId == 'shinigami' || manga.thumbnailUrl.contains('shngm')) {
-      return const {
-        'Referer': 'https://shinigami.asia/',
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      };
-    } else if (manga.sourceId == 'mangadex' || manga.thumbnailUrl.contains('mangadex')) {
-      return const {
-        'User-Agent': 'KsHcans/1.0.0',
-      };
-    } else if (manga.sourceId == 'kiryuu' || manga.thumbnailUrl.contains('kiryuu')) {
-      return const {
-        'Referer': 'https://v7.kiryuu.to/',
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      };
-    } else {
-      return const {
-        'Referer': 'https://bacakomik.my/',
-        'User-Agent':
-            'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-      };
-    }
+    return SourceConfigService.getImageHeaders(widget.manga.sourceId, widget.manga.thumbnailUrl);
   }
 
   @override

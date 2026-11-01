@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/manga.dart';
 import '../models/chapter.dart';
+import 'source_config_service.dart';
 
 class MangaDexService {
-  static const String baseUrl = 'https://api.mangadex.org';
+  static String get baseUrl => SourceConfigService.mangadexBaseUrl;
   static const String coverBaseUrl = 'https://uploads.mangadex.org/covers';
 
   static const Map<String, String> defaultHeaders = {

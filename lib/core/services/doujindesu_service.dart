@@ -2,23 +2,24 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/chapter.dart';
 import '../models/manga.dart';
+import 'source_config_service.dart';
 
 /// Service ekstraktor resmi DoujinDesu (sumber dewasa 18+ ekosistem Keiyoushi)
 /// Mendukung dekripsi payload dinamis berkecepatan tinggi dengan bypass DNS.
 class DoujinDesuService {
-  static const String baseUrl = 'https://doujin.desu.xxx';
-  static const String apiUrl = '$baseUrl/api';
+  static String get baseUrl => SourceConfigService.doujindesuBaseUrl;
+  static String get apiUrl => '$baseUrl/api';
   static const String appSecret = 'dfdf72051dbfdc7d76889ebd31324e74';
   static const String salt = 'doujindesu-scrapers-cannot-read-this-super-secret-salt-2026-v2';
   static const int hourMs = 3600000;
   static const int limit = 24;
 
-  static const Map<String, String> defaultHeaders = {
-    'x-app-secret': appSecret,
-    'Referer': '$baseUrl/',
-    'User-Agent':
-        'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36',
-  };
+  static Map<String, String> get defaultHeaders => {
+        'x-app-secret': appSecret,
+        'Referer': '$baseUrl/',
+        'User-Agent':
+            'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36',
+      };
 
   // --- Algoritma Dekripsi Keiyoushi DoujinDesu ---
 

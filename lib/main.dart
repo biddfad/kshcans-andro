@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'core/services/app_http_overrides.dart';
 import 'core/services/app_update_service.dart';
 import 'core/services/chapter_update_service.dart';
+import 'core/services/source_config_service.dart';
 import 'core/services/secure_screen_service.dart';
 import 'core/services/security_service.dart';
 import 'core/database/db_helper.dart';
@@ -21,9 +22,10 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   HttpOverrides.global = AppHttpOverrides();
   try {
+    await SourceConfigService.initialize();
     await ChapterUpdateService.initialize();
   } catch (e) {
-    debugPrint('Gagal menyiapkan pengecekan bab baru: $e');
+    debugPrint('Gagal menyiapkan layanan: $e');
   }
   runApp(const KomikReaderApp());
 }
@@ -77,6 +79,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     WidgetsBinding.instance.addObserver(this);
     _checkAppLock();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      SourceConfigService.syncRemoteConfig();
       AppUpdateService.performSilentCheck(context);
     });
   }

@@ -12,6 +12,7 @@ import 'komiku_service.dart';
 import 'komikindo_service.dart';
 import 'mangadex_service.dart';
 import 'shinigami_service.dart';
+import 'source_config_service.dart';
 
 class DownloadService {
   /// Mendapatkan direktori dasar untuk seluruh unduhan komik
@@ -80,47 +81,7 @@ class DownloadService {
 
   /// Header HTTP referer sesuai sumber
   static Map<String, String> _getHeadersForSource(Manga manga) {
-    if (manga.sourceId == 'shinigami' || manga.thumbnailUrl.contains('shngm')) {
-      return const {
-        'Referer': 'https://shinigami.asia/',
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      };
-    } else if (manga.sourceId == 'komiku' || manga.thumbnailUrl.contains('komiku')) {
-      return const {
-        'Referer': 'https://komiku.org/',
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-      };
-    } else if (manga.sourceId == 'komikindo' || manga.thumbnailUrl.contains('komikindo')) {
-      return const {
-        'Referer': 'https://komikindo.ch/',
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-      };
-    } else if (manga.sourceId == 'doujindesu' || manga.thumbnailUrl.contains('desu.')) {
-      return const {
-        'Referer': 'https://doujin.desu.xxx/',
-        'User-Agent':
-            'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36',
-      };
-    } else if (manga.sourceId == 'kiryuu' || manga.thumbnailUrl.contains('kiryuu')) {
-      return const {
-        'Referer': 'https://v7.kiryuu.to/',
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      };
-    } else if (manga.sourceId == 'mangadex' || manga.thumbnailUrl.contains('mangadex')) {
-      return const {
-        'User-Agent': 'KsHcans/1.0.0',
-      };
-    } else {
-      return const {
-        'Referer': 'https://bacakomik.my/',
-        'User-Agent':
-            'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-      };
-    }
+    return SourceConfigService.getImageHeaders(manga.sourceId, manga.thumbnailUrl);
   }
 
   /// Mengunduh seluruh lembaran komik dari satu bab ke penyimpanan lokal

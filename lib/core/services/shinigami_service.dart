@@ -2,16 +2,17 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/manga.dart';
 import '../models/chapter.dart';
+import 'source_config_service.dart';
 
 class ShinigamiService {
-  static const String apiUrl = 'https://api.shngm.io';
-  static const Map<String, String> defaultHeaders = {
-    'Accept': 'application/json',
-    'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'DNT': '1',
-    'Referer': 'https://shinigami.asia/',
-  };
+  static String get apiUrl => SourceConfigService.shinigamiApiUrl;
+  static Map<String, String> get defaultHeaders => {
+        'Accept': 'application/json',
+        'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'DNT': '1',
+        'Referer': SourceConfigService.shinigamiReferer,
+      };
 
   /// 1. Mengambil komik terpopuler di Shinigami
   static Future<List<Manga>> getPopularManga({int page = 1}) async {
@@ -48,7 +49,7 @@ class ShinigamiService {
           thumb = (item['cover_image_url']?.toString().trim() ?? '');
         }
         if (thumb.startsWith('/')) {
-          thumb = 'https://assets.shngm.id$thumb';
+          thumb = '${SourceConfigService.shinigamiAssetsUrl}$thumb';
         }
         final desc = item['description'] ?? '';
 
@@ -125,7 +126,7 @@ class ShinigamiService {
 
       final data = jsonDecode(response.body);
       final chData = data['data'] ?? {};
-      final String baseUrl = chData['base_url'] ?? 'https://assets.shngm.id';
+      final String baseUrl = chData['base_url'] ?? SourceConfigService.shinigamiAssetsUrl;
       final ch = chData['chapter'] ?? {};
       final String path = ch['path'] ?? '';
       final List pages = ch['data'] ?? [];

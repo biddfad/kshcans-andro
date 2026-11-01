@@ -2,15 +2,16 @@ import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 import '../models/manga.dart';
 import '../models/chapter.dart';
+import 'source_config_service.dart';
 
 class KomikIndoService {
-  static const String baseUrl = 'https://komikindo.ch';
-  static const Map<String, String> defaultHeaders = {
-    'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    'Referer': '$baseUrl/',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-  };
+  static String get baseUrl => SourceConfigService.komikindoBaseUrl;
+  static Map<String, String> get defaultHeaders => {
+        'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Referer': '$baseUrl/',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      };
 
   /// Pembersih URL thumbnail dari query resize WordPress
   static String cleanThumbnailUrl(String rawUrl) {

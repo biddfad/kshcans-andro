@@ -2,15 +2,16 @@ import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 import '../models/manga.dart';
 import '../models/chapter.dart';
+import 'source_config_service.dart';
 
 class BacaKomikService {
-  static const String baseUrl = 'https://bacakomik.my';
-  static const Map<String, String> defaultHeaders = {
-    'User-Agent':
-        'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-    'Referer': '$baseUrl/',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-  };
+  static String get baseUrl => SourceConfigService.bacakomikBaseUrl;
+  static Map<String, String> get defaultHeaders => {
+        'User-Agent':
+            'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+        'Referer': '$baseUrl/',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      };
 
   /// Membersihkan URL thumbnail dari proxy WordPress Jetpack (i*.wp.com) yang error 404
   static String cleanThumbnailUrl(String rawUrl) {
