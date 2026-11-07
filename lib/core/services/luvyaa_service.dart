@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 import '../models/manga.dart';
@@ -107,7 +108,13 @@ class LuvyaaService {
           '';
 
       // Status & Genre
-      final status = document.querySelector('.tsinfo .imptdt:contains("Status") i')?.text.trim() ?? 'Ongoing';
+      String status = 'Ongoing';
+      for (final el in document.querySelectorAll('.tsinfo .imptdt')) {
+        if (el.text.contains('Status')) {
+          status = el.querySelector('i')?.text.trim() ?? el.text.replaceFirst('Status', '').trim();
+          break;
+        }
+      }
       final genres = document.querySelectorAll('.mgen a').map((e) => e.text.trim()).where((g) => g.isNotEmpty).join(', ');
 
       // Deteksi URL bab yang terkunci VIP via JavaScript lockedUrls
@@ -207,26 +214,49 @@ class LuvyaaService {
       final List<String> pages = [];
       final Set<String> seenPages = {};
 
-      // Standar MangaThemesia: div#readerarea img
-      final readerArea = document.querySelector('div#readerarea');
-      if (readerArea != null) {
-        final imgElements = readerArea.querySelectorAll('img');
-        for (final img in imgElements) {
-          final src = img.attributes['src'] ?? img.attributes['data-src'] ?? '';
-          if (src.isEmpty) continue;
+      // 1. Prioritas Utama: Ekstraksi dari JSON ts_reader.run (urutan gambar asli & bersih)
+      final tsMatch = RegExp(r'ts_reader\.run\((\{.*?\})\);', dotAll: true).firstMatch(response.body);
+      if (tsMatch != null) {
+        final jsonStr = tsMatch.group(1);
+        if (jsonStr != null) {
+          try {
+            final Map<String, dynamic> data = jsonDecode(jsonStr);
+            final List sources = data['sources'] ?? [];
+            for (final s in sources) {
+              final List imgs = s['images'] ?? [];
+              for (final img in imgs) {
+                if (img is String && img.isNotEmpty && !seenPages.contains(img)) {
+                  seenPages.add(img);
+                  pages.add(img);
+                }
+              }
+            }
+          } catch (_) {}
+        }
+      }
 
-          // Abaikan banner iklan dan icon
-          if (src.endsWith('.gif') ||
-              src.contains('banner') ||
-              src.contains('iklan') ||
-              src.contains('logo') ||
-              src.contains('svg')) {
-            continue;
-          }
+      // 2. Standar MangaThemesia: div#readerarea img (jika ts_reader kosong)
+      if (pages.isEmpty) {
+        final readerArea = document.querySelector('div#readerarea');
+        if (readerArea != null) {
+          final imgElements = readerArea.querySelectorAll('img');
+          for (final img in imgElements) {
+            final src = img.attributes['src'] ?? img.attributes['data-src'] ?? '';
+            if (src.isEmpty) continue;
 
-          if (!seenPages.contains(src)) {
-            seenPages.add(src);
-            pages.add(src);
+            // Abaikan banner iklan dan icon
+            if (src.endsWith('.gif') ||
+                src.contains('banner') ||
+                src.contains('iklan') ||
+                src.contains('logo') ||
+                src.contains('svg')) {
+              continue;
+            }
+
+            if (!seenPages.contains(src)) {
+              seenPages.add(src);
+              pages.add(src);
+            }
           }
         }
       }

@@ -152,5 +152,33 @@ void main() {
       expect(pages[0], 'https://img2.cdn-nyaa.link/i/123/01.webp?v=1');
       expect(pages[1], 'https://img2.cdn-nyaa.link/i/123/02.webp?v=1');
     });
+
+    test('Correctly extracts reader pages from ts_reader.run JSON', () {
+      const mockHtml = '''
+      <html>
+      <body>
+        <script>
+          ts_reader.run({"prevUrl":"","nextUrl":"","sources":[{"source":"Default","images":["https://img2.cdn-nyaa.link/i/123/01.webp","https://img2.cdn-nyaa.link/i/123/02.webp"]}]});
+        </script>
+      </body>
+      </html>
+      ''';
+
+      final List<String> pages = [];
+      final tsMatch = RegExp(r'ts_reader\.run\((\{.*?\})\);', dotAll: true).firstMatch(mockHtml);
+      expect(tsMatch, isNotNull);
+      final jsonStr = tsMatch!.group(1);
+      expect(jsonStr, isNotNull);
+
+      // Verify JSON parses
+      final regex = RegExp(r'"(https://img2\.cdn-nyaa\.link/[^"]+)"');
+      for (final m in regex.allMatches(jsonStr!)) {
+        pages.add(m.group(1)!);
+      }
+
+      expect(pages.length, 2);
+      expect(pages[0], 'https://img2.cdn-nyaa.link/i/123/01.webp');
+      expect(pages[1], 'https://img2.cdn-nyaa.link/i/123/02.webp');
+    });
   });
 }
