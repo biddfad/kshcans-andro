@@ -187,6 +187,20 @@ class _BrowseScreenState extends State<BrowseScreen> {
                   lang: 'ID (Indonesia - MangaStream)',
                   version: 'v1.4.2',
                 ),
+                _buildSourceItem(
+                  context,
+                  sourceId: 'ikiru',
+                  title: 'Ikiru',
+                  lang: 'ID (Indonesia - Manhwa & Manga HD)',
+                  version: 'v1.0.0',
+                ),
+                _buildSourceItem(
+                  context,
+                  sourceId: 'luvyaa',
+                  title: 'Mak Luvya',
+                  lang: 'ID (Indonesia - Manhwa & Webtoon)',
+                  version: 'v1.0.0',
+                ),
 
                 // Ekstensi yang dipasang secara dinamis oleh pengguna
                 if (_installedExtensions.contains('manhwaindo'))

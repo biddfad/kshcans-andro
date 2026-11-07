@@ -3,9 +3,11 @@ import '../../../core/models/manga.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/bacakomik_service.dart';
 import '../../../core/services/doujindesu_service.dart';
+import '../../../core/services/ikiru_service.dart';
 import '../../../core/services/kiryuu_service.dart';
 import '../../../core/services/komiku_service.dart';
 import '../../../core/services/komikindo_service.dart';
+import '../../../core/services/luvyaa_service.dart';
 import '../../../core/services/mangadex_service.dart';
 import '../../../core/services/shinigami_service.dart';
 import '../../../core/widgets/source_logo.dart';
@@ -123,6 +125,14 @@ class _SourceCatalogScreenState extends State<SourceCatalogScreen> with SingleTi
         if (mode == 'popular') return await KiryuuService.getPopularManga(page: page);
         if (mode == 'latest') return await KiryuuService.getLatestUpdates(page: page);
         return await KiryuuService.searchManga(query, page: page);
+      } else if (widget.sourceId == 'ikiru') {
+        if (mode == 'popular') return await IkiruService.getPopularManga(page: page);
+        if (mode == 'latest') return await IkiruService.getLatestUpdates(page: page);
+        return await IkiruService.searchManga(query, page: page);
+      } else if (widget.sourceId == 'luvyaa') {
+        if (mode == 'popular') return await LuvyaaService.getPopularManga(page: page);
+        if (mode == 'latest') return await LuvyaaService.getLatestUpdates(page: page);
+        return await LuvyaaService.searchManga(query, page: page);
       } else {
         if (mode == 'popular') return await BacaKomikService.getPopularManga(page: page);
         if (mode == 'latest') return await BacaKomikService.getLatestUpdates(page: page);

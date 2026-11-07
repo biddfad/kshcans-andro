@@ -5,9 +5,11 @@ import '../../../core/models/manga.dart';
 import '../../../core/services/bacakomik_service.dart';
 import '../../../core/services/doujindesu_service.dart';
 import '../../../core/services/download_service.dart';
+import '../../../core/services/ikiru_service.dart';
 import '../../../core/services/kiryuu_service.dart';
 import '../../../core/services/komiku_service.dart';
 import '../../../core/services/komikindo_service.dart';
+import '../../../core/services/luvyaa_service.dart';
 import '../../../core/services/mangadex_service.dart';
 import '../../../core/services/shinigami_service.dart';
 import '../../../core/services/source_config_service.dart';
@@ -82,6 +84,10 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
         result = await BacaKomikService.getLatestUpdates(page: 1);
       } else if (_selectedSource == 'kiryuu') {
         result = await KiryuuService.getLatestUpdates(page: 1);
+      } else if (_selectedSource == 'ikiru') {
+        result = await IkiruService.getLatestUpdates(page: 1);
+      } else if (_selectedSource == 'luvyaa') {
+        result = await LuvyaaService.getLatestUpdates(page: 1);
       } else if (_selectedSource == 'mangadex') {
         result = await MangaDexService.getLatestUpdates(page: 1);
       } else if (_selectedSource == 'doujindesu') {
@@ -137,6 +143,10 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
         newItems = await BacaKomikService.getLatestUpdates(page: nextPage);
       } else if (_selectedSource == 'kiryuu') {
         newItems = await KiryuuService.getLatestUpdates(page: nextPage);
+      } else if (_selectedSource == 'ikiru') {
+        newItems = await IkiruService.getLatestUpdates(page: nextPage);
+      } else if (_selectedSource == 'luvyaa') {
+        newItems = await LuvyaaService.getLatestUpdates(page: nextPage);
       } else if (_selectedSource == 'mangadex') {
         newItems = await MangaDexService.getLatestUpdates(page: nextPage);
       } else if (_selectedSource == 'doujindesu') {
@@ -256,6 +266,10 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
         return 'MangaDex';
       case 'kiryuu':
         return 'Kiryuu';
+      case 'ikiru':
+        return 'Ikiru';
+      case 'luvyaa':
+        return 'Mak Luvya';
       case 'doujindesu':
         return 'DoujinDesu (18+)';
       default:
@@ -302,9 +316,11 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
                 _buildSourceFilterChip('Semua Sumber', 'all'),
                 _buildSourceFilterChip('Komiku', 'komiku'),
                 _buildSourceFilterChip('KomikIndo', 'komikindo'),
+                _buildSourceFilterChip('Ikiru', 'ikiru'),
                 _buildSourceFilterChip('Shinigami', 'shinigami'),
                 _buildSourceFilterChip('BacaKomik', 'bacakomik'),
                 _buildSourceFilterChip('Kiryuu', 'kiryuu'),
+                _buildSourceFilterChip('Mak Luvya', 'luvyaa'),
                 _buildSourceFilterChip('MangaDex', 'mangadex'),
                 if (_isNsfwEnabled) _buildSourceFilterChip('DoujinDesu (18+)', 'doujindesu'),
               ],

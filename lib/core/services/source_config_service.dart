@@ -18,6 +18,8 @@ class SourceConfigService {
   static const String _defaultKomikuBase = 'https://komiku.org';
   static const String _defaultDoujindesuBase = 'https://doujin.desu.xxx';
   static const String _defaultMangadexBase = 'https://api.mangadex.org';
+  static const String _defaultIkiruBase = 'https://09.ikiru.wtf';
+  static const String _defaultLuvyaaBase = 'https://v5.luvyaa.co';
 
   static Map<String, dynamic> _config = {};
 
@@ -109,6 +111,14 @@ class SourceConfigService {
     return _config['sources']?['mangadex']?['baseUrl']?.toString() ?? _defaultMangadexBase;
   }
 
+  static String get ikiruBaseUrl {
+    return _config['sources']?['ikiru']?['baseUrl']?.toString() ?? _defaultIkiruBase;
+  }
+
+  static String get luvyaaBaseUrl {
+    return _config['sources']?['luvyaa']?['baseUrl']?.toString() ?? _defaultLuvyaaBase;
+  }
+
   /// Utilitas sentral penentuan header referer gambar untuk CachedNetworkImage
   static Map<String, String> getImageHeaders(String sourceId, String url) {
     if (sourceId == 'shinigami' || url.contains('shngm')) {
@@ -150,6 +160,18 @@ class SourceConfigService {
     } else if (sourceId == 'mangadex' || url.contains('mangadex')) {
       return {
         'Referer': 'https://mangadex.org/',
+        'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      };
+    } else if (sourceId == 'ikiru' || url.contains('ikiru.id') || url.contains('ikiru.wtf')) {
+      return {
+        'Referer': '$ikiruBaseUrl/',
+        'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      };
+    } else if (sourceId == 'luvyaa' || url.contains('luvyaa') || url.contains('cdn-nyaa.link')) {
+      return {
+        'Referer': '$luvyaaBaseUrl/',
         'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       };

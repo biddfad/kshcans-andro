@@ -12,9 +12,11 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/services/bacakomik_service.dart';
 import '../../../core/services/doujindesu_service.dart';
 import '../../../core/services/download_service.dart';
+import '../../../core/services/ikiru_service.dart';
 import '../../../core/services/kiryuu_service.dart';
 import '../../../core/services/komiku_service.dart';
 import '../../../core/services/komikindo_service.dart';
+import '../../../core/services/luvyaa_service.dart';
 import '../../../core/services/mangadex_service.dart';
 import '../../../core/services/shinigami_service.dart';
 import '../../../core/services/source_config_service.dart';
@@ -161,6 +163,10 @@ class _ReaderScreenState extends State<ReaderScreen> {
         sourceId = 'doujindesu';
       } else if (ch.url.contains('kiryuu')) {
         sourceId = 'kiryuu';
+      } else if (ch.url.contains('ikiru')) {
+        sourceId = 'ikiru';
+      } else if (ch.url.contains('luvyaa')) {
+        sourceId = 'luvyaa';
       } else if (ch.url.contains('mangadex') || !ch.url.startsWith('http')) {
         sourceId = 'mangadex';
       } else {
@@ -322,6 +328,10 @@ class _ReaderScreenState extends State<ReaderScreen> {
         return await KomikIndoService.getChapterPages(url);
       } else if (url.contains('kiryuu') || widget.manga?.sourceId == 'kiryuu') {
         return await KiryuuService.getChapterPages(url);
+      } else if (url.contains('ikiru') || widget.manga?.sourceId == 'ikiru') {
+        return await IkiruService.getChapterPages(url);
+      } else if (url.contains('luvyaa') || widget.manga?.sourceId == 'luvyaa') {
+        return await LuvyaaService.getChapterPages(url);
       } else if (widget.manga?.sourceId == 'mangadex' || !url.startsWith('http')) {
         return await MangaDexService.getChapterPages(url);
       } else {

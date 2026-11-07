@@ -40,6 +40,8 @@ class SourceLogo extends StatelessWidget {
     if (id.contains('manhwaindo')) return Icons.auto_stories;
     if (id.contains('bato')) return Icons.public;
     if (id.contains('asura')) return Icons.bolt;
+    if (id.contains('ikiru')) return Icons.auto_awesome;
+    if (id.contains('luvyaa') || id.contains('luvya')) return Icons.favorite;
     return Icons.auto_stories;
   }
 
@@ -52,6 +54,8 @@ class SourceLogo extends StatelessWidget {
     if (id.contains('komiku')) return const Color(0xFF4CAF50);
     if (id.contains('komikindo')) return const Color(0xFFAB47BC);
     if (id.contains('doujindesu')) return const Color(0xFFFF1744);
+    if (id.contains('ikiru')) return const Color(0xFF00E676);
+    if (id.contains('luvyaa') || id.contains('luvya')) return const Color(0xFFFF4081);
     if (id.contains('westmanga')) return const Color(0xFFFF9800);
     if (id.contains('manhwaindo')) return const Color(0xFF00BCD4);
     if (id.contains('bato')) return const Color(0xFFE91E63);

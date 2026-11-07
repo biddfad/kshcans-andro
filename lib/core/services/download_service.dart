@@ -7,9 +7,11 @@ import '../models/chapter.dart';
 import '../database/db_helper.dart';
 import 'bacakomik_service.dart';
 import 'doujindesu_service.dart';
+import 'ikiru_service.dart';
 import 'kiryuu_service.dart';
 import 'komiku_service.dart';
 import 'komikindo_service.dart';
+import 'luvyaa_service.dart';
 import 'mangadex_service.dart';
 import 'shinigami_service.dart';
 import 'source_config_service.dart';
@@ -104,6 +106,10 @@ class DownloadService {
         pageUrls = await KomikIndoService.getChapterPages(url);
       } else if (url.contains('kiryuu') || manga.sourceId == 'kiryuu') {
         pageUrls = await KiryuuService.getChapterPages(url);
+      } else if (url.contains('ikiru') || manga.sourceId == 'ikiru') {
+        pageUrls = await IkiruService.getChapterPages(url);
+      } else if (url.contains('luvyaa') || manga.sourceId == 'luvyaa') {
+        pageUrls = await LuvyaaService.getChapterPages(url);
       } else if (manga.sourceId == 'mangadex' || !url.startsWith('http')) {
         pageUrls = await MangaDexService.getChapterPages(url);
       } else {

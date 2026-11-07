@@ -3,9 +3,11 @@ import '../../../core/database/db_helper.dart';
 import '../../../core/models/manga.dart';
 import '../../../core/services/bacakomik_service.dart';
 import '../../../core/services/doujindesu_service.dart';
+import '../../../core/services/ikiru_service.dart';
 import '../../../core/services/kiryuu_service.dart';
 import '../../../core/services/komiku_service.dart';
 import '../../../core/services/komikindo_service.dart';
+import '../../../core/services/luvyaa_service.dart';
 import '../../../core/services/mangadex_service.dart';
 import '../../../core/services/shinigami_service.dart';
 import '../../../core/theme/app_theme.dart';
@@ -34,6 +36,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   List<Manga> _komikuResults = [];
   List<Manga> _komikindoResults = [];
   List<Manga> _doujindesuResults = [];
+  List<Manga> _ikiruResults = [];
+  List<Manga> _luvyaaResults = [];
 
   bool _hasSearched = false;
 
@@ -76,6 +80,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       _komikuResults = [];
       _komikindoResults = [];
       _doujindesuResults = [];
+      _ikiruResults = [];
+      _luvyaaResults = [];
     });
 
     try {
@@ -86,6 +92,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         MangaDexService.searchManga(cleanQuery).catchError((_) => <Manga>[]),
         KomikuService.searchManga(cleanQuery).catchError((_) => <Manga>[]),
         KomikIndoService.searchManga(cleanQuery).catchError((_) => <Manga>[]),
+        IkiruService.searchManga(cleanQuery).catchError((_) => <Manga>[]),
+        LuvyaaService.searchManga(cleanQuery).catchError((_) => <Manga>[]),
         if (_isNsfwEnabled)
           DoujinDesuService.searchManga(cleanQuery).catchError((_) => <Manga>[])
         else
@@ -100,7 +108,9 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           _mangadexResults = futures[3];
           _komikuResults = futures[4];
           _komikindoResults = futures[5];
-          _doujindesuResults = futures[6];
+          _ikiruResults = futures[6];
+          _luvyaaResults = futures[7];
+          _doujindesuResults = futures[8];
           _isSearching = false;
         });
       }
@@ -125,15 +135,21 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         return _komikuResults;
       case 'komikindo':
         return _komikindoResults;
+      case 'ikiru':
+        return _ikiruResults;
+      case 'luvyaa':
+        return _luvyaaResults;
       case 'doujindesu':
         return _doujindesuResults;
       default:
         return [
           ..._komikuResults,
           ..._komikindoResults,
+          ..._ikiruResults,
           ..._shinigamiResults,
           ..._bacakomikResults,
           ..._kiryuuResults,
+          ..._luvyaaResults,
           ..._mangadexResults,
           if (_isNsfwEnabled) ..._doujindesuResults,
         ];
@@ -147,6 +163,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       _mangadexResults.length +
       _komikuResults.length +
       _komikindoResults.length +
+      _ikiruResults.length +
+      _luvyaaResults.length +
       (_isNsfwEnabled ? _doujindesuResults.length : 0);
 
   Widget _buildFilterChip(String label, String sourceId, int count) {
@@ -227,9 +245,11 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                   _buildFilterChip('Semua', 'all', _totalCount),
                   _buildFilterChip('Komiku', 'komiku', _komikuResults.length),
                   _buildFilterChip('KomikIndo', 'komikindo', _komikindoResults.length),
+                  _buildFilterChip('Ikiru', 'ikiru', _ikiruResults.length),
                   _buildFilterChip('Shinigami', 'shinigami', _shinigamiResults.length),
                   _buildFilterChip('BacaKomik', 'bacakomik', _bacakomikResults.length),
                   _buildFilterChip('Kiryuu', 'kiryuu', _kiryuuResults.length),
+                  _buildFilterChip('Mak Luvya', 'luvyaa', _luvyaaResults.length),
                   _buildFilterChip('MangaDex', 'mangadex', _mangadexResults.length),
                   if (_isNsfwEnabled)
                     _buildFilterChip('DoujinDesu (18+)', 'doujindesu', _doujindesuResults.length),
