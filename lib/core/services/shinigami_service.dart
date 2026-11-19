@@ -16,19 +16,22 @@ class ShinigamiService {
 
   /// 1. Mengambil komik terpopuler di Shinigami
   static Future<List<Manga>> getPopularManga({int page = 1}) async {
-    final url = Uri.parse('$apiUrl/v1/manga/list?page=$page&page_size=20&sort=popularity');
+    final offset = (page - 1) * 20;
+    final url = Uri.parse('$apiUrl/v1/manga/list?offset=$offset&limit=20&sort=popularity');
     return _parseMangaList(url, category: 'Populer');
   }
 
   /// 2. Mengambil komik rilis terbaru di Shinigami
   static Future<List<Manga>> getLatestUpdates({int page = 1}) async {
-    final url = Uri.parse('$apiUrl/v1/manga/list?page=$page&page_size=20&sort=latest');
+    final offset = (page - 1) * 20;
+    final url = Uri.parse('$apiUrl/v1/manga/list?offset=$offset&limit=20&sort=latest');
     return _parseMangaList(url, category: 'Terbaru');
   }
 
   /// 3. Pencarian komik di Shinigami
   static Future<List<Manga>> searchManga(String query, {int page = 1}) async {
-    final url = Uri.parse('$apiUrl/v1/manga/list?page=$page&page_size=20&q=${Uri.encodeComponent(query)}');
+    final offset = (page - 1) * 20;
+    final url = Uri.parse('$apiUrl/v1/manga/list?offset=$offset&limit=20&q=${Uri.encodeComponent(query)}');
     return _parseMangaList(url, category: 'Pencarian');
   }
 
@@ -80,7 +83,7 @@ class ShinigamiService {
 
   /// 4. Mengambil seluruh bab komik asli dari Shinigami
   static Future<List<Chapter>> getMangaChapters(String mangaId) async {
-    final url = Uri.parse('$apiUrl/v1/chapter/$mangaId/list?page_size=3000');
+    final url = Uri.parse('$apiUrl/v1/chapter/$mangaId/list?limit=1000');
     try {
       final response = await http.get(url, headers: defaultHeaders).timeout(const Duration(seconds: 15));
       if (response.statusCode != 200) return [];
