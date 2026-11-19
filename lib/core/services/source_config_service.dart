@@ -7,6 +7,7 @@ class SourceConfigService {
   static const String configUrl =
       'https://raw.githubusercontent.com/biddfad/kshcans-andro/main/sources_config.json';
   static const String dbSettingKey = 'remote_sources_config';
+  static const int bundledConfigVersion = 3;
 
   // Fallback domain default jika perangkat offline
   static const String _defaultShinigamiApi = 'https://api.shinigami.io';
@@ -29,9 +30,20 @@ class SourceConfigService {
       final cachedJson = await DBHelper.instance.getSetting(dbSettingKey);
       if (cachedJson != null && cachedJson.isNotEmpty) {
         final data = jsonDecode(cachedJson);
-        if (data is Map<String, dynamic> && data.containsKey('sources')) {
+        final cachedVersion =
+            data is Map<String, dynamic> && data['version'] is int ? data['version'] as int : 0;
+
+        // Abaikan cache lokal jika versinya lebih lama dari versi bawaan aplikasi saat ini
+        if (cachedVersion >= bundledConfigVersion &&
+            data is Map<String, dynamic> &&
+            data.containsKey('sources')) {
           _config = data;
-          debugPrint('SourceConfigService: Berhasil memuat domain dari cache lokal.');
+          debugPrint('SourceConfigService: Berhasil memuat domain dari cache lokal (v$cachedVersion).');
+        } else {
+          debugPrint(
+              'SourceConfigService: Cache lokal kedaluwarsa (v$cachedVersion < v$bundledConfigVersion), menggunakan default bawaan.');
+          _config = {};
+          await DBHelper.instance.deleteSetting(dbSettingKey);
         }
       }
     } catch (e) {
