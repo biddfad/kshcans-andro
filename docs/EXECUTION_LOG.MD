@@ -245,3 +245,13 @@ Jejak audit kronologis implementasi dan perencanaan teknis proyek KsHcans.
      - Eksekusi `flutter analyze`: Bersih (No issues found).
    - Sinkronisasi Kode:
      - Commit & push ke `biddfad/kshcans-andro` (`3c2b81e`) dan `biddfad/kshcans-ios` (`2cda9b7`).
+11. Optimasi Ukuran Berkas APK Rilis (Split-Per-ABI):
+   - Klarifikasi Ukuran APK: Build universal menghasilkan APK 56.6 MB karena menggabungkan pustaka mesin C++ dari 4 arsitektur prosesor (`arm64-v8a`, `armeabi-v7a`, `x86_64`, `x86`) dalam satu file tunggal.
+   - Eksekusi Kompilasi Ramping: Menjalankan `flutter build apk --release --split-per-abi`.
+   - Hasil Kompilasi:
+     - `app-arm64-v8a-release.apk`: **20.5 MB** (Arsitektur smartphone modern 64-bit seperti Redmi Note 10S).
+     - `app-armeabi-v7a-release.apk`: **18.2 MB** (Arsitektur 32-bit).
+     - `app-x86_64-release.apk`: **22.0 MB** (Emulator/PC).
+   - Penempatan Berkas: Menyalin `app-arm64-v8a-release.apk` ke `E:\aplikasibacakomik\KsHcans.apk`.
+   - Pemasangan Langsung: `adb -s 6TKZ89GIEE4H6XPV install -r KsHcans.apk` (Status: Success).
+   - Peluncuran: Aplikasi aktif di layar ponsel pengguna.
