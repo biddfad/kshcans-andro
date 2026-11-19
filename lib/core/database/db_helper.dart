@@ -452,4 +452,15 @@ class DBHelper {
       );
     } catch (_) {}
   }
+
+  Future<void> deleteSetting(String key) async {
+    try {
+      final db = await instance.database;
+      await db.delete(
+        'app_settings',
+        where: 'key = ?',
+        whereArgs: [key],
+      );
+    } catch (_) {}
+  }
 }
