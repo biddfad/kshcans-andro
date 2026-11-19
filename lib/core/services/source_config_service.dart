@@ -9,9 +9,9 @@ class SourceConfigService {
   static const String dbSettingKey = 'remote_sources_config';
 
   // Fallback domain default jika perangkat offline
-  static const String _defaultShinigamiApi = 'https://api.shngm.io';
-  static const String _defaultShinigamiAssets = 'https://assets.shngm.id';
-  static const String _defaultShinigamiReferer = 'https://shinigami.asia/';
+  static const String _defaultShinigamiApi = 'https://api.shinigami.io';
+  static const String _defaultShinigamiAssets = 'https://cdn.shinigami.gg';
+  static const String _defaultShinigamiReferer = 'https://s1.shinigami.mx/';
   static const String _defaultKomikindoBase = 'https://komikindo.ch';
   static const String _defaultKiryuuBase = 'https://v7.kiryuu.to';
   static const String _defaultBacakomikBase = 'https://bacakomik.my';
@@ -121,7 +121,7 @@ class SourceConfigService {
 
   /// Utilitas sentral penentuan header referer gambar untuk CachedNetworkImage
   static Map<String, String> getImageHeaders(String sourceId, String url) {
-    if (sourceId == 'shinigami' || url.contains('shngm')) {
+    if (sourceId == 'shinigami' || url.contains('shngm') || url.contains('shinigami')) {
       return {
         'Referer': shinigamiReferer,
         'User-Agent':

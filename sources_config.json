@@ -1,11 +1,11 @@
 {
-  "version": 2,
-  "lastUpdated": "2026-11-07",
+  "version": 3,
+  "lastUpdated": "2026-11-19",
   "sources": {
     "shinigami": {
-      "apiUrl": "https://api.shngm.io",
-      "assetsUrl": "https://assets.shngm.id",
-      "referer": "https://shinigami.asia/"
+      "apiUrl": "https://api.shinigami.io",
+      "assetsUrl": "https://cdn.shinigami.gg",
+      "referer": "https://s1.shinigami.mx/"
     },
     "komikindo": {
       "baseUrl": "https://komikindo.ch"

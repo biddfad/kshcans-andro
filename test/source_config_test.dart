@@ -12,9 +12,9 @@ void main() {
     });
 
     test('Returns default fallback domains when unconfigured', () {
-      expect(SourceConfigService.shinigamiApiUrl, 'https://api.shngm.io');
-      expect(SourceConfigService.shinigamiAssetsUrl, 'https://assets.shngm.id');
-      expect(SourceConfigService.shinigamiReferer, 'https://shinigami.asia/');
+      expect(SourceConfigService.shinigamiApiUrl, 'https://api.shinigami.io');
+      expect(SourceConfigService.shinigamiAssetsUrl, 'https://cdn.shinigami.gg');
+      expect(SourceConfigService.shinigamiReferer, 'https://s1.shinigami.mx/');
       expect(SourceConfigService.komikindoBaseUrl, 'https://komikindo.ch');
       expect(SourceConfigService.kiryuuBaseUrl, 'https://v7.kiryuu.to');
       expect(SourceConfigService.bacakomikBaseUrl, 'https://bacakomik.my');
@@ -71,7 +71,7 @@ void main() {
 
     test('getImageHeaders properly resolves dynamic referer and user-agent', () {
       // Shinigami
-      final shiniHeaders = SourceConfigService.getImageHeaders('shinigami', 'https://assets.shngm.id/cover.jpg');
+      final shiniHeaders = SourceConfigService.getImageHeaders('shinigami', 'https://cdn.shinigami.gg/assets/cover.jpg');
       expect(shiniHeaders['Referer'], SourceConfigService.shinigamiReferer);
       expect(shiniHeaders.containsKey('User-Agent'), true);
 
