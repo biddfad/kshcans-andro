@@ -272,3 +272,17 @@ Jejak audit kronologis implementasi dan perencanaan teknis proyek KsHcans.
    - Sinkronisasi & Kompilasi:
      - Commit & push ke `biddfad/kshcans-andro` (`89cd60e`) dan `biddfad/kshcans-ios` (`cf977f3`).
      - Kompilasi biner rilis ARM64 terbaru: `KsHcans.apk` (20.5 MB).
+
+13. Ekstraksi Komik Noblesse (544 Bab) & Pembuatan Arsip PDF Offline per Season:
+    - Analisis Arsitektur Bundel APK vs PDF:
+      - Evaluasi membundel 544 bab ke dalam APK ditolak karena ukuran data mencapai ~7-8 GB (27.000 gambar), yang melampaui batasan memori installer Android OS (OOM / install failure).
+      - Solusi yang disetujui pengguna: Pembuatan arsip dokumen PDF per Season berkualitas tinggi yang dapat dibaca offline melalui penampil dokumen bawaan ponsel (ReadEra, WPS, Google Drive) dengan mode vertical continuous scroll.
+    - Dekripsi Sumber Softkomik:
+      - Pengguna memberikan URL: `https://softkomik.app/noblesse-2007-bahasa-indonesia`.
+      - Dekripsi payload `_stk` menggunakan algoritma CryptoJS AES-256-CBC dengan kunci rahasia internal Softkomik (`nYTInq9MwR4pWa8yeXtu/2iO3t9nGP65WHpWEvqpEdU=`).
+      - Pemetaan sukses seluruh 544 bab (dari bab `001` hingga `544`) dan server CDN gambar WebP (`https://image.komik.im/softkomik/`).
+    - Implementasi Engine Konversi & Pengunduh Multi-Thread:
+      - Skrip `scratch/download_season1_pdf.py`: Pengunduhan paralel 6 worker, konversi WebP ke PDF per bab menggunakan Pillow, dan penggabungan master menggunakan PyMuPDF (`fitz`).
+      - Hasil Season 1 (Bab 001 - 092): Berhasil 100% (92/92 bab) menghasilkan dokumen utama `E:\Noblesse_PDF\Noblesse_Season_01_Lengkap.pdf` (213.79 MB) dan folder bab individual `E:\Noblesse_PDF\Season_01_Chapters\`.
+    - Otomasi Pipeline Berantai (Auto-Chain Watcher):
+      - Skrip `scratch/auto_chain.py` dan `scratch/download_all_seasons_pdf.py`: Mengawasi rampungnya Season 1 dan langsung melanjutkan secara otomatis ke Season 2 (Bab 093 - 154), Season 3 (155 - 200), Season 4 (201 - 253), Season 5 (254 - 327), Season 6 (328 - 437), dan Season 7 (438 - 544) tanpa jeda.

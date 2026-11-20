@@ -150,7 +150,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
   }
 
   /// Header HTTP referer dinamis sesuai sumber bab
-  Map<String, String> _getHeadersForChapter(Chapter ch) {
+  Map<String, String> _getHeadersForChapter(Chapter ch, {String? pageUrl}) {
     String sourceId = widget.manga?.sourceId ?? '';
     if (sourceId.isEmpty) {
       if (ch.url.startsWith('shinigami:')) {
@@ -159,7 +159,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
         sourceId = 'komiku';
       } else if (ch.url.contains('komikindo')) {
         sourceId = 'komikindo';
-      } else if (ch.url.contains('doujindesu') || ch.url.contains('desu.')) {
+      } else if (ch.url.contains('doujindesu') || ch.url.contains('desu.') || (pageUrl != null && (pageUrl.contains('desu.') || pageUrl.contains('amz-ch')))) {
         sourceId = 'doujindesu';
       } else if (ch.url.contains('kiryuu')) {
         sourceId = 'kiryuu';
@@ -173,7 +173,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
         sourceId = 'bacakomik';
       }
     }
-    return SourceConfigService.getImageHeaders(sourceId, ch.url);
+    return SourceConfigService.getImageHeaders(sourceId, pageUrl ?? ch.url);
   }
 
   @override
@@ -1139,7 +1139,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
             case ReaderItemType.chapterHeader:
               return _buildChapterTransitionHeader(item.chapterData!.chapter, key: item.key);
             case ReaderItemType.page:
-              final headers = _getHeadersForChapter(item.chapterData!.chapter);
+              final headers = _getHeadersForChapter(item.chapterData!.chapter, pageUrl: item.pageUrl);
               return _buildPageImage(item.pageUrl!, item.pageIndex, headers: headers, key: item.key);
             case ReaderItemType.loadingNext:
               return _buildLoadingNextIndicator(key: item.key);
@@ -1166,7 +1166,6 @@ class _ReaderScreenState extends State<ReaderScreen> {
               ),
       );
       final activePages = activeLoaded.pages;
-      final headers = _getHeadersForChapter(activeLoaded.chapter);
 
       return PageView.builder(
         controller: _pageController,
@@ -1183,11 +1182,12 @@ class _ReaderScreenState extends State<ReaderScreen> {
           if (index == activePages.length) {
             return Center(child: _buildEndOfChapterCard());
           }
+          final pageHeaders = _getHeadersForChapter(activeLoaded.chapter, pageUrl: activePages[index]);
           return Center(
             child: _buildPageImage(
               activePages[index],
               index,
-              headers: headers,
+              headers: pageHeaders,
               fit: BoxFit.contain,
               key: index < activeLoaded.pageKeys.length ? activeLoaded.pageKeys[index] : null,
             ),

@@ -151,7 +151,7 @@ class SourceConfigService {
         'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
       };
-    } else if (sourceId == 'doujindesu' || url.contains('desu.')) {
+    } else if (sourceId == 'doujindesu' || url.contains('desu.') || url.contains('amz-ch') || url.contains('doujin')) {
       return {
         'Referer': '$doujindesuBaseUrl/',
         'User-Agent':
