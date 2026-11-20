@@ -87,3 +87,38 @@ Dokumen pencatatan defek logika fungsional, parsing kesalahan modul, atau perila
 - **Hasil Verifikasi**:
   - Uji otomatis `test/reader_features_test.dart` ("ReaderScreen can open reader settings bottom sheet modal"): Lulus 100% tanpa exception RenderFlex overflow.
   - Seluruh fitur pembaca (Mode Webtoon, Mode Manga RTL, Mode Manga LTR, Auto-scroll, Fullscreen immersive, Zoomable Page, Scrubber slider, Bottom sheet daftar bab, Sinkronisasi riwayat baca ke SQLite) terverifikasi berfungsi sempurna.
+
+---
+
+## 2026-11-20: Rotasi Domain & Keracunan DNS ISP pada 3 Sumber Komik (DoujinDesu CDN, Ikiru, dan Mak Luvya)
+
+- **Modul Terdampak**: `lib/core/services/app_http_overrides.dart`, `lib/core/services/source_config_service.dart`, `sources_config.json`.
+- **Gejala Masalah**:
+  1. Pengguna menemukan 3 domain sumber komik mengalami error di aplikasi, termasuk DoujinDesu.
+  2. Sumber Ikiru dan Mak Luvya mengembalikan katalog kosong (0 item) atau melempar exception `CERTIFICATE_VERIFY_FAILED: Hostname mismatch`.
+  3. Lembaran gambar bab pada DoujinDesu gagal dimuat saat menggunakan jaringan seluler Indonesia.
+- **Akar Masalah (Root Cause)**:
+  1. **Rotasi Domain Upstream**:
+     - Situs Ikiru bermigrasi secara permanen (HTTP 301) dari `https://09.ikiru.wtf` ke `https://11.ikiru.wtf`.
+     - Situs Mak Luvya bermigrasi secara permanen (HTTP 301) dari `https://v5.luvyaa.co` ke `https://v6.luvyaa.co`.
+  2. **Keracunan DNS ISP (DNS Poisoning)**:
+     - ISP seluler dan broadband di Indonesia mengarahkan domain `ikiru.wtf`, `luvyaa.co`, dan CDN gambar DoujinDesu (`amz-ch.desu.pics`) ke IP sinkhole Internet Sehat (`36.86.63.185`).
+     - Sertifikat SSL yang disajikan oleh IP sinkhole tersebut tidak cocok dengan nama host asli, memicu `HandshakeException: Hostname mismatch`.
+  3. **Cakupan DoH Terbatas**:
+     - Sebelumnya `AppHttpOverrides._blockedDomainFor` hanya memfilter host `mangadex.org` dan string persis `desu.xxx`.
+     - Host CDN gambar DoujinDesu (`desu.pics`) serta domain `ikiru.wtf` dan `luvyaa.co` tidak terproteksi oleh filter DoH.
+- **Solusi Perbaikan**:
+  1. Memperbarui `sources_config.json` ke versi 4 dengan endpoint baru:
+     - Ikiru: `https://11.ikiru.wtf`
+     - Mak Luvya: `https://v6.luvyaa.co`
+  2. Memperluas pemetaan domain DoH di `lib/core/services/app_http_overrides.dart`:
+     - Mencakup `desu.xxx`, `desu.pics`, `doujindesu.tv`, `ikiru.wtf`, `ikiru.id`, `luvyaa.co`, `cdn-nyaa.link`.
+     - Menambahkan fallback IP Cloudflare resmi untuk setiap domain tersebut.
+  3. Mengimplementasikan **Universal DoH Auto-Fallback**:
+     - Jika ada domain komik mana pun yang gagal saat koneksi langsung akibat DNS poisoning (melempar HandshakeException / SocketException), sistem secara otomatis menangkap exception tersebut dan mencoba ulang koneksi menggunakan DNS-over-HTTPS (DoH Cloudflare & Google) sebelum gagal ke UI.
+- **Hasil Verifikasi**:
+  - `test/full_9_sources_audit.dart`: Seluruh 9 sumber komik (Shinigami, KomikIndo, Kiryuu, BacaKomik, Komiku, DoujinDesu, MangaDex, Ikiru, Mak Luvya) lulus 100%.
+  - DoujinDesu: 24 komik populer, 275 bab, 143 lembaran gambar berhasil diunduh (HTTP 200 OK).
+  - Ikiru: 21 komik populer termuat utuh.
+  - Mak Luvya: 18 komik populer termuat utuh.
+  - `flutter analyze`: 0 issues found (bersih).

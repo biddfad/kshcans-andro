@@ -4,6 +4,19 @@ Riwayat kronologis pembaruan dan rilis aplikasi KsHcans.
 
 ---
 
+## [1.0.6] - 2026-11-20
+
+### Diperbaiki (Fixed)
+- **Rotasi Domain Ikiru & Mak Luvya**:
+  - Memperbarui endpoint upstream Ikiru ke mirror aktif baru `https://11.ikiru.wtf` (menggantikan `09.ikiru.wtf` yang 301).
+  - Memperbarui endpoint upstream Mak Luvya ke mirror aktif baru `https://v6.luvyaa.co` (menggantikan `v5.luvyaa.co` yang 301).
+  - Memperbarui `sources_config.json` ke versi 4 di remote manifest GitHub.
+- **Bypass Keracunan DNS ISP (DoH Auto-Fallback) & CDN DoujinDesu**:
+  - Memperluas filter `AppHttpOverrides` mencakup host gambar DoujinDesu (`amz-ch.desu.pics`, `desu.pics`), Ikiru (`ikiru.wtf`), dan Mak Luvya (`luvyaa.co`, `cdn-nyaa.link`).
+  - Menerapkan mekanisme **Universal DoH Auto-Fallback**: jika terjadi kegagalan handshake akibat DNS poisoning sinkhole ISP lokal (`Hostname mismatch`), koneksi secara otomatis beralih menggunakan Cloudflare/Google DoH asli.
+
+---
+
 ## [1.0.5] - 2026-11-19
 
 ### Diperbaiki (Fixed)

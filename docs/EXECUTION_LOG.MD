@@ -255,3 +255,20 @@ Jejak audit kronologis implementasi dan perencanaan teknis proyek KsHcans.
    - Penempatan Berkas: Menyalin `app-arm64-v8a-release.apk` ke `E:\aplikasibacakomik\KsHcans.apk`.
    - Pemasangan Langsung: `adb -s 6TKZ89GIEE4H6XPV install -r KsHcans.apk` (Status: Success).
    - Peluncuran: Aplikasi aktif di layar ponsel pengguna.
+12. Resolusi 3 Domain Error (DoujinDesu CDN, Ikiru, Mak Luvya) & Riset Komik Noblesse:
+   - Investigasi Defek Domain Pengguna:
+     - Ditemukan 3 sumber yang bermasalah: DoujinDesu (CDN gambar diblokir ISP), Ikiru (rotasi domain 301 ke `11.ikiru.wtf` + DNS poisoning), dan Mak Luvya (rotasi domain 301 ke `v6.luvyaa.co` + DNS poisoning).
+   - Implementasi Solusi:
+     - Pembaruan remote manifest `sources_config.json` ke versi 4 (Ikiru: `https://11.ikiru.wtf`, Mak Luvya: `https://v6.luvyaa.co`).
+     - Pembaruan `source_config_service.dart` (bundledConfigVersion = 4, default fallbacks).
+     - Peningkatan `app_http_overrides.dart`: pemetaan DoH untuk `amz-ch.desu.pics`, `desu.pics`, `ikiru.wtf`, `luvyaa.co` dan penambahan mekanisme Universal DoH Auto-Fallback jika terjadi kegagalan handshake akibat DNS poisoning sinkhole ISP lokal.
+   - Verifikasi Kualitas:
+     - Pengujian `test/full_9_sources_audit.dart`: Seluruh 9 sumber (Shinigami, KomikIndo, Kiryuu, BacaKomik, Komiku, DoujinDesu, MangaDex, Ikiru, Mak Luvya) lulus 100%.
+     - `flutter analyze`: 0 issues found.
+   - Riset Komik Noblesse:
+     - Analisis alasan tidak ada di 9 sumber saat ini: Noblesse adalah komik berlisensi resmi LINE Webtoon Indonesia (544 chapter lengkap tamat). Agregator umum lokal dan MangaDex men-takedown chapter karena hak cipta.
+     - Analisis Softkomik: Domain sekundernya down (521), rute API sering dirombak (404), dan enkripsi token sering berganti.
+     - Penemuan platform terbaik: LINE Webtoon Indonesia menyediakan seluruh 544 chapter resmi sub Indo dengan CDN gambar Akamai yang sangat cepat (200 OK). Siap diintegrasikan sebagai Sumber ke-10 jika disetujui pengguna.
+   - Sinkronisasi & Kompilasi:
+     - Commit & push ke `biddfad/kshcans-andro` (`89cd60e`) dan `biddfad/kshcans-ios` (`cf977f3`).
+     - Kompilasi biner rilis ARM64 terbaru: `KsHcans.apk` (20.5 MB).
