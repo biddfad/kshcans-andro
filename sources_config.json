@@ -1,6 +1,6 @@
 {
-  "version": 3,
-  "lastUpdated": "2026-11-19",
+  "version": 4,
+  "lastUpdated": "2026-11-20",
   "sources": {
     "shinigami": {
       "apiUrl": "https://api.shinigami.io",
@@ -26,12 +26,12 @@
       "baseUrl": "https://api.mangadex.org"
     },
     "ikiru": {
-      "baseUrl": "https://09.ikiru.wtf",
+      "baseUrl": "https://11.ikiru.wtf",
       "portalUrl": "https://ikiru.id",
       "cdnUrl": "https://cdn.ikiru.id"
     },
     "luvyaa": {
-      "baseUrl": "https://v5.luvyaa.co",
+      "baseUrl": "https://v6.luvyaa.co",
       "cdnUrl": "https://img2.cdn-nyaa.link"
     }
   }

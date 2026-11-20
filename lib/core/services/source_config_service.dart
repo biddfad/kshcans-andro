@@ -7,7 +7,7 @@ class SourceConfigService {
   static const String configUrl =
       'https://raw.githubusercontent.com/biddfad/kshcans-andro/main/sources_config.json';
   static const String dbSettingKey = 'remote_sources_config';
-  static const int bundledConfigVersion = 3;
+  static const int bundledConfigVersion = 4;
 
   // Fallback domain default jika perangkat offline
   static const String _defaultShinigamiApi = 'https://api.shinigami.io';
@@ -19,8 +19,8 @@ class SourceConfigService {
   static const String _defaultKomikuBase = 'https://komiku.org';
   static const String _defaultDoujindesuBase = 'https://doujin.desu.xxx';
   static const String _defaultMangadexBase = 'https://api.mangadex.org';
-  static const String _defaultIkiruBase = 'https://09.ikiru.wtf';
-  static const String _defaultLuvyaaBase = 'https://v5.luvyaa.co';
+  static const String _defaultIkiruBase = 'https://11.ikiru.wtf';
+  static const String _defaultLuvyaaBase = 'https://v6.luvyaa.co';
 
   static Map<String, dynamic> _config = {};
 

@@ -18,7 +18,9 @@ class AppHttpOverrides extends HttpOverrides {
   /// Cadangan terakhir jika DoH gagal. Aman karena sertifikat tetap divalidasi.
   static const Map<String, List<String>> _fallbackIps = {
     'mangadex.org': ['45.129.229.1', '45.129.229.2'],
-    'desu.xxx': ['172.67.72.203', '104.26.1.249', '104.26.0.249'],
+    'desu.xxx': ['172.67.72.203', '104.26.1.249', '104.26.0.249', '104.21.1.241', '172.67.152.153'],
+    'ikiru.wtf': ['104.21.48.71', '172.67.181.50'],
+    'luvyaa.co': ['172.67.158.51', '104.21.90.166'],
   };
 
   static const Duration _connectTimeout = Duration(seconds: 15);
@@ -26,7 +28,9 @@ class AppHttpOverrides extends HttpOverrides {
 
   static String? _blockedDomainFor(String host) {
     if (host.endsWith('mangadex.org')) return 'mangadex.org';
-    if (host.contains('desu.xxx')) return 'desu.xxx';
+    if (host.contains('desu.xxx') || host.contains('desu.pics') || host.contains('doujindesu')) return 'desu.xxx';
+    if (host.contains('ikiru.wtf') || host.contains('ikiru.id')) return 'ikiru.wtf';
+    if (host.contains('luvyaa.co') || host.contains('cdn-nyaa.link')) return 'luvyaa.co';
     return null;
   }
 
@@ -38,23 +42,38 @@ class AppHttpOverrides extends HttpOverrides {
 
     client.connectionFactory = (Uri uri, String? proxyHost, int? proxyPort) async {
       final blockedDomain = _blockedDomainFor(uri.host);
-      if (blockedDomain == null) {
-        return _connect(uri, uri.host, context);
+      if (blockedDomain != null) {
+        final candidates = <String>[
+          ...await _resolveViaDoh(dohClient, uri.host),
+          ...(_fallbackIps[blockedDomain] ?? const []),
+        ];
+        Object? lastError;
+        for (final ip in candidates.toSet()) {
+          try {
+            return await _connect(uri, ip, context);
+          } catch (e) {
+            lastError = e;
+          }
+        }
+        throw lastError ?? SocketException('Tidak dapat terhubung ke ${uri.host}');
       }
 
-      final candidates = <String>[
-        ...await _resolveViaDoh(dohClient, uri.host),
-        ..._fallbackIps[blockedDomain]!,
-      ];
-      Object? lastError;
-      for (final ip in candidates.toSet()) {
-        try {
-          return await _connect(uri, ip, context);
-        } catch (e) {
-          lastError = e;
+      // Coba koneksi langsung terlebih dahulu
+      try {
+        return await _connect(uri, uri.host, context);
+      } catch (e) {
+        // Jika gagal karena DNS poisoning / blokir ISP (HandshakeException / SocketException),
+        // otomatis fallback ke resolusi DNS-over-HTTPS (Cloudflare / Google)
+        final dohIps = await _resolveViaDoh(dohClient, uri.host);
+        if (dohIps.isNotEmpty) {
+          for (final ip in dohIps.toSet()) {
+            try {
+              return await _connect(uri, ip, context);
+            } catch (_) {}
+          }
         }
+        rethrow;
       }
-      throw lastError ?? SocketException('Tidak dapat terhubung ke ${uri.host}');
     };
 
     return client;
